@@ -26,6 +26,7 @@ class WorkflowTests(unittest.TestCase):
     def test_example_links_and_card_sources_are_valid(self):
         self.assertEqual(workflow.check(self.root)['errors'], [])
         self.assertEqual((self.root / 'README.en.md').read_bytes(), (ROOT / 'README.en.md').read_bytes())
+        self.assertEqual((self.root / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
         cards, errors, warnings = review.catalog(self.root)
         self.assertEqual((len(cards), len(errors), len(warnings)), (12, 0, 0))
         self.assertTrue(all(c['eligible'] for c in cards))
@@ -38,6 +39,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertFalse((dest / '.flashcards/local').exists())
         self.assertEqual(review.catalog(dest)[0], [])
         self.assertTrue((dest / 'Prompts/整理材料.md').is_file())
+        self.assertEqual((dest / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
         self.assertIn('[English](README.en.md)', (dest / 'README.md').read_text(encoding='utf-8'))
         self.assertIn('[简体中文](README.md)', (dest / 'README.en.md').read_text(encoding='utf-8'))
 

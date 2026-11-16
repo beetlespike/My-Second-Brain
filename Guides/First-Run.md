@@ -1,53 +1,37 @@
-# From your first source to your first review
+# First use
 
-Use the short article and transcript included in this repository to try the full process: organize sources, connect concepts, study a suggested topic, and review it. These are synthetic teaching materials. Work in a separate learning folder.
+[简体中文](第一次使用.md)
 
-## Prepare a learning folder
+Start with your own material or the included examples. Adapt these prompts as you go. If you already have concept notes, you can begin with a network review or card review.
 
-In Codex, open the downloaded project and send:
+## Organize a source
 
-> Read AGENTS.md and Guides/工具与扩展.md. Use the initialization tool to create an empty My-Learning folder beside this project. If that name already contains files, choose a new name. Keep the guides and tools, and copy assets/demo/文章原文.md and assets/demo/教学字幕.vtt from this project into assets/demo/ in the new folder. Leave out the existing notes, concepts, and cards. Tell me the full path when it is ready.
+Open the same folder in Obsidian and Codex. Give Codex a link, text, PDF, transcript, or selected conversation, and describe your question:
 
-Open the new folder as a vault in Obsidian, and switch Codex to the same folder. Continue the following steps there. You can also start from an empty folder when you use your own materials later.
+> Follow AGENTS.md to organize this material. I want to understand… Add the relevant concepts to my existing network, keep the sources, and suggest a question worth studying next. Explain and write notes in English.
 
-## Organize the sources and check shared concepts
+Open `MOCs/知识库入口.md` to follow the links between sources and concepts. A recurring concept can usually be added to its existing page. The assistant should report unread text, attachments, or images. See [sources and tools](Sources-and-tools.md) for reading options.
 
-> Follow Prompts/整理材料.md to organize assets/demo/文章原文.md and assets/demo/教学字幕.vtt. I want to understand why adding samples usually makes an estimate more stable. Read the article first, then the transcript. Record what you actually read, connect their concepts in one network, and update the knowledge index. Show which concepts both sources support and check for a missing explanation. Write the explanations in English.
+For a ready-made example, use `assets/demo/文章原文.md` and `assets/demo/教学字幕.vtt`. Both cover the sample mean, standard error, and sample size, so you can see how two sources share concepts.
 
-Open `MOCs/知识库入口.md` in Obsidian. These materials cover the sample mean, standard error, and the relationship between sample size and precision. Follow the links: both source notes should lead to the relevant concepts, and the concept pages should point back to their sources. The video note should identify the transcript timestamps it covers.
+## Choose something to study
 
-The transcript contains text and timestamps. The note should say that no video images or audio were inspected. If a concept already has a page, new material should add to that page.
+Intake may already produce a study suggestion. You can also ask:
 
-## Find a topic to study next
+> Look for a missing explanation between these concepts. Suggest one supported topic I can start studying, and explain which existing ideas it connects.
 
-The intake step may already produce a suggestion. You can also ask:
+The statistics example assumes independent sampling, so one follow-up is “What changes when observations are correlated?” Choose a study note that interests you and ask Codex to teach through an example, derivation, or discussion. A variation can help check your understanding. Point out any step that is unclear.
 
-> Follow Prompts/回顾与补学.md to review this concept network. Find one condition shared by these concepts that has not been explained yet. Write a study note with an explanation and example, and say which question it would help me answer. Show me the suggestion and wait for my choice before teaching it.
+Your explanations and applications can support a record of learning; AI-generated answers cannot substitute for them. Once understood, a topic can join the main concept network, with incoming links updated and useful questions made into cards.
 
-Both materials assume independent sampling and mention correlated samples without working through them. Correlated sampling is therefore one supported suggestion. If that note already exists, expand it. If Codex suggests another topic, check that it explains the specific relationship to the existing concepts.
+## Review and give feedback
 
-The suggested page should contain material you can read and have links from the study index and related concepts. A title on a “learn later” list is not enough to begin a lesson.
+> Follow Prompts/每日复习.md to prepare cards for these topics I have studied. Check the sources and give me a review page I can open in a browser.
 
-## Choose a topic and answer the questions
+Try recalling the answer before flipping the card. Choose a rating or write a question, then click “导出反馈文件” (export feedback file). Give the downloaded JSON to Codex to save. Feedback affects later reviews after a successful import; duplicate imports are detected.
 
-> I choose correlated sampling (相关抽样). Follow Prompts/带学新概念.md and teach me in English, starting with duplicated observations. First check that I understand the sample mean. Explain the calculation, give me a variation, and wait for my answer.
+A day's review set keeps its original content. Running it again opens the same set; later cards wait for a subsequent set. For a first trial, it helps to finish studying and creating cards before generating the review set. The [card guide](Flashcard-Review.md) contains the format and details.
 
-Pause here and answer yourself. Say if a step is unclear. Codex should use your answer to decide what to explain next and check whether you can solve a variation.
+## Adjust the setup
 
-Once you understand the topic, ask Codex to move it into the main concept network, update its incoming links and study index, and prepare review cards. Links should still open the page after it moves. Unresolved parts stay in the study area. An answer written by the AI does not count as your answer.
-
-## Open the review page and save feedback
-
-> Follow Prompts/每日复习.md to prepare a review of what I have just studied. Check the card sources, generate the review set, and give me the full path to the HTML file I can open in a browser. If there are no usable cards, explain why and address the material we have just worked through first.
-
-Open the HTML file. Try answering, then flip the card. Expand the explanation and sources to check that the card matches the topic you studied. Choose a rating or add a written comment, then click “导出反馈文件” (export feedback file).
-
-Give the downloaded JSON file to Codex and say:
-
-> Save this feedback file and tell me how many entries were actually saved and how they affect later reviews. Check that it belongs to this learning folder and review set.
-
-Feedback enters the review history after a successful import. Importing the same file again should report duplicates. Feedback from a different learning folder cannot be mixed in.
-
-The first review set generated each day keeps its original content. Generating it again opens the same set; cards added afterward wait for a later set. Keep the database and dates intact. For your first complete run, follow the order above: study the topic, create cards, then generate the review set.
-
-See the [card guide](Flashcard-Review.md) for card format and source checks, and the [tool guide](工具与扩展.md) for initialization and review commands. Those guides are in Chinese; Codex can explain them in English.
+To start your own vault, ask Codex to initialize a separate empty folder beside the project. Copy the two sample sources if you want to use them there. Folder names, source types, and prompts can change to suit you; see the [tool guide](工具与扩展.md). Once the workflow suits you, consider [periodic organization](Automation.md).

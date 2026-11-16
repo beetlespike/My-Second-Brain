@@ -13,7 +13,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 NOTE_DIRS = ('Papers', 'Articles', 'Videos', 'Chats', 'Concepts', 'MOCs', '待学概念', 'Flashcards')
 TYPES = dict(Papers='paper', Articles='article', Videos='video', Chats='chat', Concepts='concept', MOCs='moc', Flashcards='flashcard_set')
-SUPPORT = ('README.md', 'README.en.md', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards')
+SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards')
 
 
 def files_under(path):
@@ -54,18 +54,20 @@ def initialize(source, destination, empty=False):
                 (destination / name).mkdir(exist_ok=True)
             (destination / 'MOCs/知识库入口.md').write_text('---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n从一份材料和一个想理解的问题开始。整理后在这里记录概念之间的关系。\n', encoding='utf-8')
             (destination / 'README.md').write_text(
-                '# My Second Brain\n\n简体中文 | [English](README.en.md)\n\n'
+                '# My Second Brain\n\n简体中文 | [English](README.en.md) · [MIT](LICENSE)\n\n'
                 '这是你的空白学习目录，保留了指南和工具。视频、文章、论文和对话中的概念可以在这里相互连接，同一个概念由不同来源共同补充。\n\n'
                 '在 Obsidian 与 Codex 中打开同一个目录。给 Codex 一份材料和一个想理解的问题，使用 [整理材料](Prompts/整理材料.md) 开始；从 [知识库入口](MOCs/知识库入口.md) 阅读整理后的内容。\n\n'
                 '有了一些概念后，用 [回顾与补学](Prompts/回顾与补学.md) 寻找共同缺少的前提或方法。选中一个建议后，使用 [带学新概念](Prompts/带学新概念.md) 学习，再用 [每日复习](Prompts/每日复习.md) 准备卡片。\n\n'
-                '书籍、课程与实践记录的放置方式见 [其他来源](Guides/其他来源.md)，初始化、检查和复习命令见 [工具与扩展](Guides/工具与扩展.md)。\n',
+                '操作示例见 [第一次使用](Guides/第一次使用.md)。读取工具可以参考 [来源与工具](Guides/来源与工具.md)，也可以直接提供正文或字幕；命令和设置见 [工具与扩展](Guides/工具与扩展.md)。用顺手后，可以参考 [自动整理与维护](Guides/自动整理与维护.md) 安排定期任务。\n\n'
+                '模板的代码、指南和示例采用 [MIT 许可证](LICENSE)；你导入的材料保留各自的权利与许可。\n',
                 encoding='utf-8')
             (destination / 'README.en.md').write_text(
-                '# My Second Brain\n\n[简体中文](README.md) | English\n\n'
+                '# My Second Brain\n\n[简体中文](README.md) | English · [MIT](LICENSE)\n\n'
                 'This is your empty learning folder, with the guides and tools included. Connect concepts from videos, articles, papers, and conversations, and add explanations from different sources to the same concept page.\n\n'
                 'Open this folder in both Obsidian and Codex. Give Codex a source and a question, then use the [material intake prompt](Prompts/整理材料.md). Read the resulting notes from the [knowledge index](MOCs/知识库入口.md).\n\n'
                 'Once you have some concept notes, use [review and further learning](Prompts/回顾与补学.md) to look for missing prerequisites or methods. Choose a suggestion, work through it with [guided learning](Prompts/带学新概念.md), then prepare cards with [daily review](Prompts/每日复习.md).\n\n'
-                'See [other sources](Guides/其他来源.md) for books, courses, and practical work, and the [tool guide](Guides/工具与扩展.md) for initialization, checks, and review commands. Most guides and the saved prompts are in Chinese; ask Codex to explain them and write notes in your preferred language.\n',
+                'See [First use](Guides/First-Run.md) for a walkthrough and [Sources and tools](Guides/Sources-and-tools.md) for optional readers. You can also supply text or transcripts directly. Commands and settings are in the [tool guide](Guides/工具与扩展.md); [Automation](Guides/Automation.md) covers periodic tasks. The saved prompts and detailed note guides are in Chinese; ask Codex to explain and write notes in your preferred language.\n\n'
+                'The template code, guides, and examples use the [MIT License](LICENSE). Materials you import retain their own rights and licenses.\n',
                 encoding='utf-8')
     except Exception:
         # 已写入的文件保留，便于核查失败原因；不会删除用户目录。

@@ -1,20 +1,16 @@
 # My Second Brain
 
-[简体中文](README.md) | English
+[简体中文](README.md) | English · [MIT](LICENSE)
 
-My Second Brain is a local knowledge-base template for Obsidian and Codex. It connects concepts you learn from different sources. A video can contribute several concepts; when an article, paper, or conversation covers one of them again, its explanation goes into the existing concept page, with a reference back to the source.
+My Second Brain is a local knowledge-base template for Obsidian and Codex. It connects concepts from videos, articles, papers, conversations, and practical work. One source can contribute several concepts; several sources can add to the same concept page.
 
-You can also use the network to decide what to study next. During a review, Codex looks for missing prerequisites and methods that connect existing concepts, then writes notes you can study. Choose a suggestion, work through it with Codex, and use exercises and review cards to revisit what you have learned.
+The network can also give you something new to study. During organization or review, the AI looks for missing prerequisites and methods between existing concepts and writes study notes. Choose a topic, work through an explanation or exercise, then revisit it with review cards.
 
-The example notes, most guides, and saved prompts are currently in Chinese. You can ask Codex to explain them in English and write new notes in your preferred language. The first-run guide linked below is also available in English.
+## From sources to a concept network
 
-## How a video connects to other sources
+Suppose you watch a 20-minute video on Bilibili or YouTube about why larger samples tend to make estimates more stable. Organizing the transcript can produce a video note with timestamps and separate pages for the sample mean, standard error, and sample size and precision.
 
-Suppose you watch a 20-minute video on Bilibili or YouTube about why estimates tend to become more stable with larger samples. Give Codex a transcript with timestamps, and it can keep a video note with references to the relevant moments while extracting separate pages for the sample mean, standard error, and the relationship between sample size and precision.
-
-Later, you read a post on X or WeChat that also explains standard error. Its example can go into the existing page. A research paper can add assumptions and results. If you ask GPT why a step in a formula works, you can check the derivation and keep that explanation on the same page.
-
-Opening the standard error page then gives you several explanations and the conditions under which each applies. Opening the video note gives you links to the concepts covered in that video.
+Later, an article on X or WeChat, or a research paper, covers the same formula. Its examples and assumptions can go into the existing concept page. A derivation you discussed with GPT can join them once checked.
 
 ```mermaid
 flowchart LR
@@ -23,78 +19,58 @@ flowchart LR
     T["Article note"] --> B
     P["Paper or report note"] --> B
     P --> C["Sample size and precision"]
-    Q["Follow-up question in a conversation"] --> C
+    Q["Follow-up question"] --> C
     A --> B
     B --> C
 ```
 
-The [statistical estimation example](MOCs/统计估计.md) contains a small network like this. Its source article, transcript, report, and conversation are synthetic teaching materials included in the repository.
+The standard error page brings together explanations and their conditions. The video note links to the concepts it covers. Try the [statistical estimation example](MOCs/统计估计.md); its source texts, transcript, and conversation are synthetic teaching materials.
 
-## Finding something new to learn in existing notes
+## Learning from the network
 
-Suppose you have studied standard error and sample size, along with paired evaluation: comparing two methods on the same set of questions. Each topic involves assumptions about whether observations are independent. In paired evaluation, the observations are the score differences across questions.
+Standard error, sample size and precision, and paired evaluation all involve assumptions about independence between observations. If the notes cover only independent observations, a review can suggest correlated sampling to fill the shared gap.
 
-If your notes cover only independent observations, a review can lead to a suggestion: study correlated sampling. How should you calculate uncertainty when observations are related? The suggestion comes from a gap shared by several pages, so you do not need to know the name of the missing concept in advance.
+The [suggested study note](待学概念/数理基础/相关抽样.md) asks: if you duplicate every observation, does doubling the row count make the estimate more precise? It includes an explanation and calculation. You can also ask Codex for a variation to solve, without knowing the missing concept's name in advance.
 
-The [correlated sampling note](待学概念/数理基础/相关抽样.md) starts with a question:
+What you learn joins the concept network; useful questions become review cards. Questions during review can lead to changes in the notes. You can continue learning this way without adding a new source, or defer a suggestion. Progress is recorded from your explanations, derivations, or applications.
 
-> If you duplicate every observation, the number of rows doubles. Does the estimate become more precise? If two test questions are rewordings of the same question, do they count as two independent pieces of evidence?
+## Getting started
 
-The note explains how observations varying together affect uncertainty, then works through the duplicate-record example. Ask Codex to walk you through it and give you a variation to solve. Your answer guides the next step: explain a difficulty, update the concept pages with what you have learned, or prepare review cards. Questions that come up during review can lead to further changes in the notes.
+Download or clone the repository and open the same folder in Obsidian and Codex. Read and edit notes in Obsidian, organize materials and discuss questions in Codex, and open a local HTML page for card review.
 
-This gives you a way to learn from the network even when you have no new video or article to add. You can accept, defer, or skip a suggestion. Progress is recorded from your explanations, derivations, and applications; generating a note alone does not count as learning it.
+Browse the [knowledge index](MOCs/知识库入口.md), or give Codex your own material:
 
-## Try it with Obsidian and Codex
+> Read AGENTS.md and help me organize this material. My question is… Add its concepts to the existing network, keep the sources, and look for something worth studying next. Explain and write notes in English.
 
-The project is a local folder containing example notes, instructions for the AI assistant, and a few tools. The notes are Markdown files. Use Obsidian to read and edit them, Codex to process materials and discuss questions, and a local web page to review cards.
+For a complete walkthrough, see [First use](Guides/First-Run.md). Adapt the prompts, materials, and study order to your needs.
 
-1. Download or clone this repository. Open the project folder as a vault in Obsidian, and open the same folder in Codex.
-2. Open the [knowledge index](MOCs/知识库入口.md) in Obsidian and follow a few links between concepts.
-3. Follow [From your first source to your first review](Guides/First-Run.md) in a separate learning folder. It uses the included article and transcript, with prompts to copy and results to check at each step.
-
-To try learning from the existing example network first, send this prompt to Codex:
-
-> Read README.en.md and AGENTS.md. Find the assumptions about independent observations in the notes on standard error (标准误), sample size and precision (样本量与精度), and paired evaluation (配对评测). Explain why correlated sampling (相关抽样) would be a useful next topic. Teach me in English, starting with the duplicate-record example. Give me a variation and wait for my answer before continuing. Update the concept pages based on what I actually understand, then prepare review cards after we have worked through the topic.
-
-The repository currently has 15 concept pages and one suggested topic to study:
-
-| Reading path | Concepts and relationships |
+| Example path | Topics |
 | --- | --- |
-| [Statistical estimation](MOCs/统计估计.md) | Sample mean, standard error, sample size and precision, then correlated sampling |
-| [Information and prediction](MOCs/信息与预测.md) | Entropy, cross-entropy, KL divergence, and perplexity |
-| [Text encoding and tokenization](MOCs/文本编码与分词.md) | UTF-8, byte-level BPE, reversible decoding, and how tokenization affects perplexity |
-| [Research and experiments](MOCs/研究与实验.md) | Testable questions, near-counterexamples, ablation studies, and paired evaluation |
+| [Statistical estimation](MOCs/统计估计.md) | Sample mean, standard error, sample size and precision, correlated sampling |
+| [Information and prediction](MOCs/信息与预测.md) | Entropy, cross-entropy, KL divergence, perplexity |
+| [Text encoding and tokenization](MOCs/文本编码与分词.md) | UTF-8, byte-level BPE, reversible decoding, tokenization and perplexity |
+| [Research and experiments](MOCs/研究与实验.md) | Testable questions, near-counterexamples, ablations, paired evaluation |
 
-Text beside the links explains how the concepts relate. Obsidian's local graph can also show which notes connect to a page.
+There are 15 concept pages and one suggested study note. The examples and saved prompts are in Chinese; Codex can explain them and write new notes in your preferred language. Prompts cover [intake](Prompts/整理材料.md), [further learning](Prompts/回顾与补学.md), [guided study](Prompts/带学新概念.md), and [review](Prompts/每日复习.md).
 
-## Everyday use
+## Tools for reading materials
 
-Give Codex a link, text, transcript, or selected conversation, along with the question you want to understand. For example:
+The repository includes note guides, examples, link checks, and card tools. Your environment supplies web access, subtitle extraction, PDF parsing, and conversation history. The AI then organizes what it can read into notes and concepts.
 
-> Help me work through this video. I want to understand when adding data improves an estimate. Add the relevant concepts to my existing network, keep the sources, and check whether there is anything I should study next.
+[Sources and tools](Guides/Sources-and-tools.md) offers an optional selection: yt-dlp for subtitles, Whisper for audio, Trafilatura for ordinary web pages, and Docling or MinerU for PDFs. You can use your own tools or provide text, transcripts, and selected conversations directly. These extractors are not bundled; connect them as needed.
 
-The [material intake prompt](Prompts/整理材料.md) covers this task. The [review and further learning prompt](Prompts/回顾与补学.md) checks the existing network for missing prerequisites, unexplained relationships, and methods that could apply to other problems. Once you choose a suggestion, use the [guided learning prompt](Prompts/带学新概念.md) for explanation and exercises.
+The local tools need Python 3.9 or later and use its standard library plus bundled KaTeX. No server or Obsidian plugin is required. See the [tool guide](Guides/工具与扩展.md) for commands and settings. Cards use adjustable fixed review intervals; their effect on learning has not been evaluated.
 
-You start these tasks in Codex. Looking for further learning is part of the intake and review instructions. You can set up a schedule in your own environment if you want regular runs; the template does not install background tasks.
+## Periodic organization and maintenance
 
-For cards, use the [daily review prompt](Prompts/每日复习.md). Try to recall the answer before revealing the explanation and sources. At the end, click “导出反馈文件” (export feedback file) in the browser and give the file to Codex to import. Feedback affects later review schedules once it has been saved. Generating the review page requires Python 3.9 or later. Codex can check the environment and run the commands described in the [tool guide](Guides/工具与扩展.md).
+In my personal vault, I periodically organize authorized Codex and ChatGPT learning conversations and review the relationships between concepts. This relies on history access and local file access in my current desktop environment. Other clients may need exports or manually supplied excerpts.
 
-To start with your own material, ask Codex to create a separate, empty learning folder that keeps the guides and tools. Books, courses, and practical work can also be included; see [other sources](Guides/其他来源.md). How much text, transcript, or image content can be read from a link depends on the tools you use. Missing material needs to be provided or retrieved separately.
+[Automation and maintenance](Guides/Automation.md) describes this practice, adaptable prompts, and alternatives, along with a separate task for maintaining the public repository. Choose a cadence that suits you. Downloading the template does not create scheduled tasks or read account history.
 
-## Why I made this
+## Background and other setups
 
-I use Codex with my own Obsidian vault to organize what I learn from different places. Conversations with GPT are a major source, and I wanted to bring videos, articles, papers, and other learning materials into the same process. When a concept comes up again, I can add to my existing understanding. When I revisit those concepts, I can look for what to study next.
+This project grew out of my private Obsidian vault. I wanted concepts from different sources to build on one another and help me find what to study next. Some examples were adapted from that network, with private conversations, experiences, and learning records removed. See [sources and licensing](THIRD-PARTY.md).
 
-My Second Brain collects the guides, examples, and local tools behind that process. The information theory, text encoding, and research methods examples were adapted from parts of my private vault. They retain the concept relationships, with private conversations, personal experiences, and learning records removed. See [sources and licensing](THIRD-PARTY.md) for details.
+You can pair Codex with another Markdown editor, or Obsidian with another AI assistant that can access local files. Manual editing also works. Folders and source types can be extended; see [other sources](Guides/其他来源.md). In editors without Obsidian link support, open the `.md` file at the path shown in the link.
 
-## Other setups and extensions
-
-You can use Codex with another Markdown editor, or Obsidian with another AI assistant that can access local files and follow the project guides. With just an editor and browser, you can maintain concepts and links manually and run the Python review tools. Finding new concepts and working through them requires your own work or an AI assistant you connect separately.
-
-Notes use Obsidian links such as `[[Concepts/数理基础/标准误|标准误]]`. In an editor that does not support these links, open the `.md` file at the path before the vertical bar. The card interface displays source excerpts directly.
-
-The AI assistant writes content and teaches from the project guides. Local scripts check links and card sources, generate review sets, and save feedback. They use the Python standard library and a bundled copy of KaTeX, with no server or Obsidian plugin required. Review uses adjustable fixed intervals; its effect on learning has not been evaluated. The [tool guide](Guides/工具与扩展.md) explains how to change folders, source types, and review settings.
-
-Personal review records are stored in `.flashcards/local/`; cached source text and processing records belong in `.local/`. Include both in your backups. Git ignores these directories, but check the notes themselves for private content before sharing a vault.
-
-This is an early public version. A license for the project's own material has not yet been chosen. Third-party components retain their existing licenses.
+The project's own code, templates, documentation, and examples use the [MIT License](LICENSE). Third-party components and materials you import retain their own rights and licenses. Back up personal review records in `.flashcards/local/` and source caches and processing records in `.local/`. Git ignores both directories; also check note contents for private information before sharing your vault.
