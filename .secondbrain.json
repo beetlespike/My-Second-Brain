@@ -1,0 +1,8 @@
+{
+  "timezone": "Asia/Shanghai",
+  "daily_limit": 10,
+  "new_limit": 6,
+  "concept_limit": 2,
+  "interval_days": {"again": 1, "uncertain": 3, "familiar": 14},
+  "source_dirs": ["Papers", "Articles", "Videos", "Chats", "Concepts", "MOCs"]
+}
