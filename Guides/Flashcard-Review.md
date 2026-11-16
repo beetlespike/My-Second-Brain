@@ -18,7 +18,7 @@
 
 ## 内容与版本
 
-每个卡片文件用 `type: flashcard_set`。每张卡以二级标题分隔，隐藏 JSON 记录 id、version、status、concept、topic、sources；正文依次使用三级标题“正面”“简答”“展开”“来源”。完整示例见示例库 Flashcards 目录；空白学习目录可按此约定让 Codex 制卡。
+每个卡片文件用 `type: flashcard_set`。每张卡以二级标题分隔，紧接一条 `<!-- card: {...} -->` 元数据，记录 id、version、status、concept、topic、sources；正文依次使用三级标题“正面”“简答”“展开”“来源”。`card:` 是工具识别卡片的标记，需要保留。
 
 ID 使用 `sb-fc-0001` 形式并保持稳定。status 为 active、paused 或 retired。每个来源有仓库相对 path、精确 heading 与该章节的 sha256。
 
@@ -29,6 +29,39 @@ python3 .flashcards/review.py source-hash 'Concepts/数理基础/标准误.md' '
 ```
 
 来源变化、消失或标题不唯一时，卡片退出新题组。核查后更新文字、来源指纹和版本。指纹只能发现文本变化，不能核验科学正确性或远程原文是否更新。卡片正文或来源改变却未升版本时，工具拒绝注册新内容。
+
+空白目录也可以使用下面的格式。先选一个已经学过、已接入 Concepts 的章节，再替换示例中的题目、答案、路径、章节名和指纹。用 `source-hash` 获取真实指纹；在整个 Flashcards 目录中选择尚未使用的 ID。示例中的占位指纹不能直接制卡。
+
+```markdown
+---
+type: flashcard_set
+status: active
+---
+
+# 相关抽样复习
+
+## 重复观测
+
+<!-- card: {"id":"sb-fc-0001","version":1,"status":"active","concept":"相关抽样","topic":"抽样估计","sources":[{"path":"Concepts/数理基础/相关抽样.md","heading":"重复记录的计算","sha256":"替换为 source-hash 返回的完整值"}]} -->
+
+### 正面
+
+把每条独立观测复制成三条，均值的方差会变成原来的三分之一吗？
+
+### 简答
+
+设原来 m 个独立观测的方差都为 σ²。复制后，分子和分母都乘以三，均值仍是原来的均值，所以方差仍为 σ²/m。新增的行与原观测完全相关；误把 3m 行当成独立样本，才会得到 σ²/(3m)。
+
+### 展开
+
+$\bar X=3\sum_iY_i/(3m)=\sum_iY_i/m$。独立观测的数量仍是 m，复制只是重复记录。
+
+### 来源
+
+[[Concepts/数理基础/相关抽样#重复记录的计算|相关抽样：重复记录的计算]]
+```
+
+制卡后运行 `audit`，核对 `total`、`eligible`、`errors` 和 `needs_review`。写了一张卡却显示 `total: 0` 时，检查是否存到了 Flashcards，以及文件和元数据格式是否正确。来源待核对的卡片需要先处理，不能只改指纹来跳过检查。
 
 旧题组保留原内容和版本；查看旧题组时说明当前来源变化。旧版反馈只保留到历史，不直接调整新版间隔。退役卡保留历史。修订预览不生成新题组，也不接受评分。
 

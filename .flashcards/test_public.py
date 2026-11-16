@@ -79,6 +79,40 @@ class PublicWorkflowTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 review.source_text(self.root, {'path': 'Concepts/link.md', 'heading': '外部'})
 
+    def write_card_file(self, marker='card: '):
+        source = self.root / 'Concepts/均值.md'
+        source.parent.mkdir()
+        source.write_text('# 均值\n\n## 定义\n观测值相加再除以数量。\n', encoding='utf-8')
+        src = {'path': 'Concepts/均值.md', 'heading': '定义'}
+        src['sha256'] = review.digest(review.source_text(self.root, src))
+        card = dict(self.cards[0], sources=[src])
+        note = self.root / 'Flashcards/练习.md'
+        note.parent.mkdir()
+        note.write_text('---\ntype: flashcard_set\n---\n\n## 均值\n\n<!-- ' + marker
+                        + json.dumps(card) + ' -->\n\n### 正面\n怎样计算均值？\n\n'
+                        '### 简答\n观测值相加再除以数量。\n\n### 展开\n先求和。\n', encoding='utf-8')
+        return note
+
+    def test_hidden_json_without_card_marker_is_reported(self):
+        self.write_card_file(marker='')
+        cards, errors, _ = review.catalog(self.root)
+        self.assertEqual(cards, [])
+        self.assertTrue(any('card:' in e and '练习.md' in e for e in errors))
+
+    def test_an_unmarked_card_cannot_hide_beside_a_valid_card(self):
+        note = self.write_card_file()
+        note.write_text(note.read_text() + '\n## 第二张\n\n### 正面\n另一个问题\n', encoding='utf-8')
+        cards, errors, _ = review.catalog(self.root)
+        self.assertEqual(len(cards), 1)
+        self.assertTrue(any('第二张' in e and 'card:' in e for e in errors))
+
+    def test_heading_in_code_example_does_not_split_a_card(self):
+        note = self.write_card_file()
+        note.write_text(note.read_text().replace('先求和。', '```markdown\n## 示例标题\n```\n先求和。'), encoding='utf-8')
+        cards, errors, _ = review.catalog(self.root)
+        self.assertEqual(errors, [])
+        self.assertIn('先求和。', cards[0]['details'])
+
 
 if __name__ == '__main__':
     unittest.main()

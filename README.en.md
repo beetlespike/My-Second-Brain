@@ -6,7 +6,7 @@ My Second Brain is a local knowledge-base template for Obsidian and Codex. It co
 
 You can also use the network to decide what to study next. During a review, Codex looks for missing prerequisites and methods that connect existing concepts, then writes notes you can study. Choose a suggestion, work through it with Codex, and use exercises and review cards to revisit what you have learned.
 
-The example notes, guides, and saved prompts are currently in Chinese. You can ask Codex to explain them in English and write new notes in your preferred language.
+The example notes, most guides, and saved prompts are currently in Chinese. You can ask Codex to explain them in English and write new notes in your preferred language. The first-run guide linked below is also available in English.
 
 ## How a video connects to other sources
 
@@ -50,7 +50,9 @@ The project is a local folder containing example notes, instructions for the AI 
 
 1. Download or clone this repository. Open the project folder as a vault in Obsidian, and open the same folder in Codex.
 2. Open the [knowledge index](MOCs/知识库入口.md) in Obsidian and follow a few links between concepts.
-3. Send this prompt to Codex to try learning from the existing network:
+3. Follow [From your first source to your first review](Guides/First-Run.md) in a separate learning folder. It uses the included article and transcript, with prompts to copy and results to check at each step.
+
+To try learning from the existing example network first, send this prompt to Codex:
 
 > Read README.en.md and AGENTS.md. Find the assumptions about independent observations in the notes on standard error (标准误), sample size and precision (样本量与精度), and paired evaluation (配对评测). Explain why correlated sampling (相关抽样) would be a useful next topic. Teach me in English, starting with the duplicate-record example. Give me a variation and wait for my answer before continuing. Update the concept pages based on what I actually understand, then prepare review cards after we have worked through the topic.
 

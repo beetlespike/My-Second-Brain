@@ -63,8 +63,8 @@ def today(timezone='Asia/Shanghai'):
     return datetime.now(ZoneInfo(timezone)).date().isoformat()
 
 
-def section(text, heading):
-    """取得指定 Markdown 标题及其子节；重名标题须先消歧。"""
+def markdown_structure(text):
+    """列出代码块之外的 Markdown 标题。"""
     lines = text.splitlines()
     headings, fence = [], None
     for i, line in enumerate(lines):
@@ -78,6 +78,12 @@ def section(text, heading):
             continue
         if fence is None and (m := re.match(r'^(#{1,6}) (.+?)\s*$', line)):
             headings.append((i, len(m[1]), m[2]))
+    return lines, headings
+
+
+def section(text, heading):
+    """取得指定 Markdown 标题及其子节；重名标题须先消歧。"""
+    lines, headings = markdown_structure(text)
     hits = [(i, level) for i, level, title in headings if title == heading]
     if len(hits) != 1:
         raise ValueError(f"来源标题需要唯一匹配：{heading}，实际 {len(hits)} 处")
@@ -114,7 +120,18 @@ def catalog(root):
         if "type: flashcard_set\n" not in text:
             errors.append(f"{p.name}：缺少 type: flashcard_set")
             continue
-        for match in META.finditer(text):
+        lines, headings = markdown_structure(text)
+        starts = [(i, title) for i, level, title in headings if level == 2]
+        if not starts:
+            errors.append(f'{p.name}：需要二级标题和 <!-- card: {{...}} --> 卡片元数据')
+        for start, title in starts:
+            end = next((i for i, level, _ in headings if i > start and level <= 2), len(lines))
+            block = '\n'.join(lines[start:end])
+            matches = list(META.finditer(block))
+            if len(matches) != 1:
+                errors.append(f'{p.name}：{title} 需要一条 <!-- card: {{...}} --> 卡片元数据，实际 {len(matches)} 条')
+                continue
+            match = matches[0]
             try:
                 c = json.loads(match[1])
                 for key in ("id", "version", "status", "concept", "topic", "sources"):
@@ -129,9 +146,7 @@ def catalog(root):
                 if c["id"] in seen:
                     raise ValueError(f"重复编号 {c['id']}")
                 seen.add(c["id"])
-                tail = text[match.end():]
-                stop = re.search(r"^## ", tail, re.M)
-                body = tail[:stop.start()] if stop else tail
+                body = block[match.end():]
                 c.update(front=body_part(body, "正面"), back=body_part(body, "简答"),
                          details=body_part(body, "展开"), card_file=str(p.relative_to(root)))
                 if not c["front"] or not c["back"] or not c["sources"]:

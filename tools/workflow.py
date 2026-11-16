@@ -65,7 +65,7 @@ def initialize(source, destination, empty=False):
                 'This is your empty learning folder, with the guides and tools included. Connect concepts from videos, articles, papers, and conversations, and add explanations from different sources to the same concept page.\n\n'
                 'Open this folder in both Obsidian and Codex. Give Codex a source and a question, then use the [material intake prompt](Prompts/整理材料.md). Read the resulting notes from the [knowledge index](MOCs/知识库入口.md).\n\n'
                 'Once you have some concept notes, use [review and further learning](Prompts/回顾与补学.md) to look for missing prerequisites or methods. Choose a suggestion, work through it with [guided learning](Prompts/带学新概念.md), then prepare cards with [daily review](Prompts/每日复习.md).\n\n'
-                'See [other sources](Guides/其他来源.md) for books, courses, and practical work, and the [tool guide](Guides/工具与扩展.md) for initialization, checks, and review commands. The guides and saved prompts are in Chinese; ask Codex to explain them and write notes in your preferred language.\n',
+                'See [other sources](Guides/其他来源.md) for books, courses, and practical work, and the [tool guide](Guides/工具与扩展.md) for initialization, checks, and review commands. Most guides and the saved prompts are in Chinese; ask Codex to explain them and write notes in your preferred language.\n',
                 encoding='utf-8')
     except Exception:
         # 已写入的文件保留，便于核查失败原因；不会删除用户目录。
