@@ -25,6 +25,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_example_links_and_card_sources_are_valid(self):
         self.assertEqual(workflow.check(self.root)['errors'], [])
+        self.assertEqual((self.root / 'README.en.md').read_bytes(), (ROOT / 'README.en.md').read_bytes())
         cards, errors, warnings = review.catalog(self.root)
         self.assertEqual((len(cards), len(errors), len(warnings)), (12, 0, 0))
         self.assertTrue(all(c['eligible'] for c in cards))
@@ -37,6 +38,13 @@ class WorkflowTests(unittest.TestCase):
         self.assertFalse((dest / '.flashcards/local').exists())
         self.assertEqual(review.catalog(dest)[0], [])
         self.assertTrue((dest / 'Prompts/整理材料.md').is_file())
+        self.assertIn('[English](README.en.md)', (dest / 'README.md').read_text(encoding='utf-8'))
+        self.assertIn('[简体中文](README.md)', (dest / 'README.en.md').read_text(encoding='utf-8'))
+
+    def test_missing_link_in_english_readme_is_reported(self):
+        note = self.root / 'README.en.md'
+        note.write_text(note.read_text(encoding='utf-8') + '\n[Missing note](missing.md)\n', encoding='utf-8')
+        self.assertTrue(any('README.en.md' in e and 'missing.md' in e for e in workflow.check(self.root)['errors']))
 
     def test_initialization_never_overwrites_user_content(self):
         dest = Path(self.tmp.name) / 'occupied'
