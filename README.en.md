@@ -2,53 +2,26 @@
 
 [简体中文](README.md) · English · [MIT](LICENSE)
 
-Use Obsidian for your notes and Codex to work through the material with you. When a video, an article, or a conversation explains the same idea, add it to the same Markdown note. As those notes build up, Codex can look for an assumption they share and suggest what to study next.
+Keep your notes in Obsidian and study with Codex. Add explanations from videos, papers, or conversations to the same concept note. Codex can follow the links between notes to suggest what to study next.
 
-## Try it with something of your own
+[First-use guide](Guides/First-Run.md) · [Browse the example notes](MOCs/知识库入口.md)
 
-On GitHub, choose **Code → Download ZIP**. Unzip it and open the same folder in Obsidian and Codex. Give Codex a transcript, an article, or a PDF, along with a question you want to answer.
+![Obsidian Graph view on a dark background. Blue-gray nodes are existing concepts. Pale gold nodes are AI study suggestions.](assets/demo/obsidian-graph.png)
 
-> Read AGENTS.md first. Help me understand [your question]. Put reusable explanations in concept notes and keep the sources. Add to existing notes when they already cover the idea. If you find a question worth studying next, show me which notes led you to it.
+Blue-gray is for existing concepts and pale gold is for AI study suggestions. [Comparing RAG under a latency budget](待学概念/模型评测/延迟预算下比较RAG.md) puts retrieval recall, answer quality, and wait time into one exercise. [Open the graph in Obsidian](Guides/Graph-View.md)
 
-You can also start with a short transcript and article included in the download and turn them into a review card. [First-use guide](Guides/First-Run.md)
+## Try it with your own material
 
-## Explore the graph in Obsidian
+On GitHub, choose **Code → Download ZIP**, then unzip it. Open the same folder in Obsidian and Codex. Give Codex a source and a question you want to answer.
 
-![Obsidian Graph view on a dark background. Seven topic groups have distinct colors, and three pale-gold study notes link to related concepts.](assets/demo/obsidian-graph.png)
+> Read AGENTS.md. Help me answer my question using this source. Add explanations I can reuse to the concept notes and keep the sources. Suggest a follow-up question if you find one worth studying.
 
-On the left, cyan marks text encoding and tokenization, pink information theory, purple research methods, and blue statistics. On the right, orange marks inference serving, teal retrieval, and light green model evaluation.
-
-Pale gold marks study topics the AI suggested from the existing notes. Each page gives you a problem to try.
-
-- [Correlated observations (相关抽样)](待学概念/数理基础/相关抽样.md) connects standard error, sample size, and paired evaluation. Would making a copy of every row give you a more precise estimate?
-- [Context budget for retrieval (检索上下文预算)](待学概念/智能体与检索/检索上下文预算.md) connects retrieval and reranking to the model's prefill stage, when it processes the input. How do you keep the conclusion, conditions, and exception when space is tight?
-- [Comparing RAG under a latency budget (延迟预算下比较RAG)](待学概念/模型评测/延迟预算下比较RAG.md) connects retrieval recall, evidence-backed answers, and serving latency. Which setup would you pick if 95% of requests must start streaming within 850 ms?
-
-To browse the graph yourself, open **Graph view** in the example vault. Hover over a node to see its links or click to read the note. [Graph view and colors](Guides/Graph-View.md)
-
-## From standard error to correlated observations
-
-A lesson transcript derives the variance of the mean of independent observations. An article explains why taking four times as many observations cuts the standard error of the mean in half. The derivation and the example go on one standard error page, with a link back to each source. Both materials are synthetic. [Video note](Videos/抽样次数与误差.md) · [Article note](Articles/重复抽样与标准误.md) · [Standard error](Concepts/数理基础/标准误.md)
-
-Both sources assume independent observations. Ask Codex what changes when that assumption fails. It can suggest a lesson on correlated observations. Try the opening question yourself. If you copy every row of your data once, does the standard error of the mean get smaller? [Study note](待学概念/数理基础/相关抽样.md)
-
-<details>
-<summary>Reveal the answer</summary>
-
-The sum and the number of rows both double, so the mean stays exactly the same. Its standard error across repeated samples stays the same too. Each copy is perfectly correlated with its original, so the formula for independent observations does not apply.
-
-</details>
-
-Ask Codex to change the example and wait for your reasoning. If you stop halfway through, leave the unresolved step on the study page. Once you understand it, link the concept back to standard error and make a review card. A question left during review can bring you back to the source note next time. [Walk through the example](MOCs/统计估计.md) · [Browse the other topics](MOCs/知识库入口.md)
+The sample [video](Videos/抽样次数与误差.md) and [article](Articles/重复抽样与标准误.md) contribute to the same [standard error note](Concepts/数理基础/标准误.md). Both are synthetic and assume independent observations. That assumption led Codex to suggest [correlated observations](待学概念/数理基础/相关抽样.md). If you duplicate every row in a dataset, does the mean's standard error shrink? Work it out, then have Codex help where you get stuck and make a review card. [Try the full example](Guides/First-Run.md)
 
 ## Use the tools you have
 
-The notes are local Markdown. You can edit them by hand or use another assistant with file access. The review tool needs Python 3.9 or later and writes an HTML page you can open offline. Use your own tools for subtitles, web pages, or PDFs, or supply the text directly. Ask Codex for a blank folder if you want to start fresh, or to add a source type or change the review intervals. The sample notes and card interface are in Chinese. You can ask the assistant to write new notes in your language. [Sources and tools](Guides/Sources-and-tools.md) · [Commands and settings](Guides/工具与扩展.md)
+The same questions kept turning up in papers, courses, and chats. I wanted one page I could come back to, with the sources still there. [Periodic review](Guides/Automation.md)
 
-I keep a personal vault for things I learn in different places, including conversations with ChatGPT and Codex. The same question keeps coming up in different sources. I gave each concept a page so I could add to it and pick up where I'd left off. I also review selected conversations periodically and look at what the notes still leave unexplained. Scheduled collection depends on which conversations your client can read and whether it can write to your local folder. [Periodic organization](Guides/Automation.md)
+The notes are local Markdown. Use your own editor, source reader, or AI assistant with file access. The review tool uses Python 3.9 or later to generate a page you can open offline. The sample notes and review interface are in Chinese. [Sources and tools](Guides/Sources-and-tools.md) · [Add sources or change review settings](Guides/工具与扩展.md)
 
-## Feedback and license
-
-If you find a broken link, an unclear step, or a source you'd like to use, open an issue and describe what you tried. A public or synthetic example is enough to reproduce a problem. If the workflow fits the way you learn, a Star on GitHub is welcome. [Issues](https://github.com/beetlespike/My-Second-Brain/issues)
-
-The project code, template, documentation, and examples are under the MIT License. Bundled components and materials you import retain their own licenses. Check note contents and attachments before sharing your own vault. [MIT License](LICENSE) · [Examples and third-party components](THIRD-PARTY.md)
+Code, templates, and examples are [MIT licensed](LICENSE). [Third-party components and imported material](THIRD-PARTY.md) have their own licenses. If you run into a problem, [open an issue](https://github.com/beetlespike/My-Second-Brain/issues) with a public or synthetic example.

@@ -1,6 +1,6 @@
 {
   "collapse-filter": true,
-  "search": "path:Concepts OR tag:#ai-suggested",
+  "search": "path:Concepts OR (path:待学概念 tag:#ai-suggested)",
   "showTags": false,
   "showAttachments": false,
   "hideUnresolved": true,
@@ -8,59 +8,17 @@
   "collapse-color-groups": true,
   "colorGroups": [
     {
-      "query": "path:\"Concepts/推理系统\"",
-      "color": {
-        "a": 1,
-        "rgb": 16756309
-      }
-    },
-    {
-      "query": "path:\"Concepts/智能体与检索\"",
-      "color": {
-        "a": 1,
-        "rgb": 3204277
-      }
-    },
-    {
-      "query": "path:\"Concepts/研究方法\"",
-      "color": {
-        "a": 1,
-        "rgb": 11705343
-      }
-    },
-    {
-      "query": "path:\"Concepts/数理基础\"",
-      "color": {
-        "a": 1,
-        "rgb": 6990335
-      }
-    },
-    {
-      "query": "path:\"Concepts/信息论\"",
-      "color": {
-        "a": 1,
-        "rgb": 15828161
-      }
-    },
-    {
-      "query": "path:\"Concepts/计算机基础\"",
-      "color": {
-        "a": 1,
-        "rgb": 6610927
-      }
-    },
-    {
-      "query": "path:\"Concepts/模型评测\"",
-      "color": {
-        "a": 1,
-        "rgb": 9628275
-      }
-    },
-    {
       "query": "path:待学概念 tag:#ai-suggested",
       "color": {
         "a": 1,
         "rgb": 16773248
+      }
+    },
+    {
+      "query": "path:Concepts",
+      "color": {
+        "a": 1,
+        "rgb": 8885674
       }
     }
   ],

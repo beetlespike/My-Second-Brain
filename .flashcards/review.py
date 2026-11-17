@@ -423,11 +423,12 @@ def render(root, session, output, *, preview=False, standalone=True):
     root_id = "sb-flashcards-" + session["date"] + ("-revision" if preview else "")
     if session.get('workspace_id'):
         root_id += '-' + session['workspace_id'][:8]
-    result = template.replace("__ROOT_ID__", root_id).replace("__DECK_DATA__", data)
+    result = template.replace("__ROOT_ID__", root_id)
     if "__MATH_RENDERER__" in result:
         renderer = (root / ".flashcards/vendor/katex-0.19.1.min.js").read_text(encoding="utf-8")
         renderer = re.sub(r"</script", r"<\\/script", renderer, flags=re.I)
         result = result.replace("__MATH_RENDERER__", "<script>" + renderer + "</script>")
+    result = result.replace("__DECK_DATA__", data)
     if standalone:
         result = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + html.escape(session['date']) + ' · My Second Brain 复习</title></head><body>' + result + '</body></html>'
     if len(result.encode()) >= 1_000_000:

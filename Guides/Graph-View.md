@@ -2,24 +2,23 @@
 
 [English](#view-the-network-in-obsidian)
 
-用 Obsidian 打开含示例笔记的完整目录，在左侧选择「查看关系图谱」。点圆点可以读笔记。鼠标移到圆点上可以看它连着哪些笔记。
+用 Obsidian 打开完整的示例目录，选择左侧的「查看关系图谱」。点圆点读笔记，鼠标停在圆点上看连线。
 
-想复现预览的分组和黑底，可以在单独的示例库中使用配套文件。
+想用 README 里的黑底和两种节点颜色，可以在示例库里用配套设置。
 
-1. 在打开该库之前，把 `assets/demo/obsidian-graph.json` 复制到该库的 `.obsidian/graph.json`。如果已有图谱设置，先备份。
-2. 把 `assets/demo/obsidian-graph.css` 放到该库的 `.obsidian/snippets/`。打开 Obsidian，在「外观」选深色配色并启用此 CSS 片段。
-3. 打开关系图谱。各主题按概念目录着色。淡金色的圆点是带 `ai-suggested` 标签的待学页。
+1. 关闭示例库窗口。把 `assets/demo/obsidian-graph.json` 复制到 `.obsidian/graph.json`。目录可以手动建，已有设置先备份。
+2. 把 `assets/demo/obsidian-graph.css` 复制到 `.obsidian/snippets/`。重新打开库，在「外观」选深色并启用该 CSS 片段。
 
-例如，「延迟预算下比较 RAG」连着检索召回率、答案正确性和推理延迟。点进去可以先按等待上限选一套方案，再核对它放到真实流量里还缺什么数据。
+灰蓝色是已有的概念。淡金色是「待学概念」中带 `ai-suggested` 标签的笔记。可以从「延迟预算下比较 RAG」点进去，看看检索召回、答案质量和首段输出延迟如何影响选型。
 
 [Obsidian 关系图谱说明](https://obsidian.md/help/plugins/graph)
 
 ## View the network in Obsidian
 
-Open the full example folder as a vault and select **Open graph view**. Click a node to read the note. Hover to see its links.
+Open the full example folder as a vault and select **Open graph view**. Click a node to read the note, or hover to see its links.
 
-To reproduce the preview in a separate example vault, copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` before opening the vault. Back up your graph settings if that file already exists. Put `assets/demo/obsidian-graph.css` in `.obsidian/snippets/`, then choose the dark appearance and enable the snippet. The groups follow the concept folders. Pale gold marks pending study notes tagged `ai-suggested`.
+To use the README's dark background and two node colors in the example vault, close its window and copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json`. Create the folder if needed and back up any existing graph settings. Copy `assets/demo/obsidian-graph.css` into `.obsidian/snippets/`. Reopen the vault, choose dark mode in Appearance, and enable the snippet.
 
-Try **Comparing RAG under a latency budget** (延迟预算下比较RAG). It connects retrieval recall, answer quality, and serving latency. Pick a setup that meets the latency limit, then check what you would still need to measure under real traffic.
+Blue-gray nodes are existing concepts. Pale gold marks study notes tagged `ai-suggested` in the `待学概念/` folder. Open **Comparing RAG under a latency budget** (延迟预算下比较RAG) to see how retrieval recall, answer quality, and wait time affect the choice of setup.
 
 [Obsidian Graph view help](https://obsidian.md/help/plugins/graph)

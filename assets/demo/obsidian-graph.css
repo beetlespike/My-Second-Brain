@@ -3,11 +3,11 @@
 }
 
 .graph-view.color-line {
-  color: #657daa;
+  color: #65758e;
 }
 
 .graph-view.color-fill-focused {
-  color: #fff098;
+  color: #d2dbe8;
 }
 
 .workspace-leaf-content[data-type="graph"] .view-content {

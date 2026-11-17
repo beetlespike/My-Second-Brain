@@ -101,9 +101,10 @@ def prose(text):
 
 
 def fields(text):
-    if not text.startswith('---\n') or '\n---' not in text[4:]:
+    frontmatter = re.match(r'\A---[ \t]*\n(.*?)^---[ \t]*$', text, re.M | re.S)
+    if not frontmatter:
         return {}
-    header = text.split('---', 2)[1]
+    header = frontmatter[1]
     return {k: v.strip().strip('\"\'') for k, v in re.findall(r'^([\w_]+):[ \t]*([^\n]*)$', header, re.M)}
 
 

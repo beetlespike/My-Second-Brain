@@ -105,6 +105,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(any('Books/读书笔记.md' in e and 'source_url' in e for e in errors))
         self.assertTrue(any('Books/读书笔记.md' in e and 'evidence_status' in e for e in errors))
 
+    def test_dashes_inside_source_url_keep_following_properties(self):
+        self.add_book('---\ntype: book\nsource_url: https://example.org/a---b\nevidence_status: anchored\n---\n\n# 读书笔记\n')
+        self.assertEqual(workflow.check(self.root)['errors'], [])
+
+    def test_review_keeps_literal_template_tokens_in_card_text(self):
+        cards, _, _ = review.catalog(self.root)
+        question = '模板何时替换 __MATH_RENDERER__？'
+        card = dict(cards[0], front=question)
+        with review.connect(self.root) as db:
+            session, _ = review.make_session(db, [card], '2026-01-01')
+        output = self.root / 'view.html'
+        review.render(self.root, session, output)
+        self.assertTrue(question in output.read_text(encoding='utf-8'))
+
     def test_missing_and_ambiguous_note_links_are_reported(self):
         p = self.root / 'Concepts/数理基础/样本均值.md'
         p.write_text(p.read_text(encoding='utf-8') + '\n[[不存在]]\n', encoding='utf-8')
