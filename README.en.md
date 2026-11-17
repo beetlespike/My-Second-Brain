@@ -14,9 +14,9 @@ You can also start with a short transcript and article included in the download 
 
 ## Explore the graph in Obsidian
 
-Open Graph view in the example vault to browse six groups of notes. Start with [inference serving](MOCs/推理系统.md) to see how the KV cache supports continuous batching, or [retrieval and generation](MOCs/检索与生成.md) to see how reranked evidence reaches the model.
+Open Graph view in the example vault to browse seven groups of notes. Follow the evidence through [retrieval and generation](MOCs/检索与生成.md), check what went wrong with [model evaluation](MOCs/模型评测.md), and see how extra context affects waiting time in [inference serving](MOCs/推理系统.md).
 
-The example uses six colors for the topics. Pale gold marks topics the AI suggested from existing notes. One suggestion links reranking with prefill. Which evidence fits in the model's input? Try keeping a result, its conditions, and an exception within a fixed [retrieval context budget](待学概念/智能体与检索/检索上下文预算.md). [Graph view and colors](Guides/Graph-View.md)
+Pale gold marks study topics suggested by the AI. In [comparing RAG under a latency budget](待学概念/模型评测/延迟预算下比较RAG.md), you can compare retrieval, answer quality, and time to the first output. Which setup would you choose given a limit on how long users can wait? [Graph view and colors](Guides/Graph-View.md)
 
 ## From standard error to correlated observations
 

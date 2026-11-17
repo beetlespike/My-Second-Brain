@@ -22,6 +22,8 @@
 
 完成前通读实际修改，检查来源、适用条件、链接和状态。运行 `python3 tools/workflow.py check` 与 `python3 .flashcards/review.py audit`。工具改动运行相应测试。失败与未核实事项按实际范围说明。
 
+文件检查和卡片演练用临时目录。需要看实际界面时沿用同一个展示库。清理试用时同时检查 Obsidian 仓库列表和磁盘目录。
+
 ## 选择本次工作
 
 - 整理材料：Prompts/整理材料.md。

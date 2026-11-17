@@ -8,9 +8,9 @@
 
 1. 在打开该库之前，把 `assets/demo/obsidian-graph.json` 复制到该库的 `.obsidian/graph.json`。如果已有图谱设置，先备份。
 2. 把 `assets/demo/obsidian-graph.css` 放到该库的 `.obsidian/snippets/`。打开 Obsidian，在「外观」选深色配色并启用此 CSS 片段。
-3. 打开关系图谱。六种颜色对应概念目录。淡金色的圆点是带 `ai-suggested` 标签的待学页。
+3. 打开关系图谱。各主题按概念目录着色。淡金色的圆点是带 `ai-suggested` 标签的待学页。
 
-例如，「检索上下文预算」同时连着「检索与重排」和「Prefill 与 Decode」。点进去可以试着在给定 token 限额内选出支持结论、条件和例外的证据。
+例如，「延迟预算下比较 RAG」连着检索召回率、答案正确性和推理延迟。点进去可以先按等待上限选一套方案，再核对它放到真实流量里还缺什么数据。
 
 [Obsidian 关系图谱说明](https://obsidian.md/help/plugins/graph)
 
@@ -18,8 +18,8 @@
 
 Open the full example folder as a vault and select **Open graph view**. Click a node to read the note. Hover to see its links.
 
-To reproduce the preview in a separate example vault, copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` before opening the vault. Back up your graph settings if that file already exists. Put `assets/demo/obsidian-graph.css` in `.obsidian/snippets/`, then choose the dark appearance and enable the snippet. The six colors correspond to concept folders. Pale gold marks pending study notes tagged `ai-suggested`.
+To reproduce the preview in a separate example vault, copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` before opening the vault. Back up your graph settings if that file already exists. Put `assets/demo/obsidian-graph.css` in `.obsidian/snippets/`, then choose the dark appearance and enable the snippet. The groups follow the concept folders. Pale gold marks pending study notes tagged `ai-suggested`.
 
-Try **Retrieval context budget** (检索上下文预算). Its links lead to **Retrieve and rerank** and **Prefill and decode**. The note asks you to fit the evidence for a result, its conditions, and its exception within a token budget.
+Try **Comparing RAG under a latency budget** (延迟预算下比较RAG). It connects retrieval recall, answer quality, and serving latency. Pick a setup that meets the latency limit, then check what you would still need to measure under real traffic.
 
 [Obsidian Graph view help](https://obsidian.md/help/plugins/graph)

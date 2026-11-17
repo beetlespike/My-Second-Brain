@@ -1,6 +1,6 @@
 {
   "collapse-filter": true,
-  "search": "path:Concepts OR file:相关抽样 OR file:检索上下文预算",
+  "search": "path:Concepts OR tag:#ai-suggested",
   "showTags": false,
   "showAttachments": false,
   "hideUnresolved": true,
@@ -47,6 +47,13 @@
       "color": {
         "a": 1,
         "rgb": 6610927
+      }
+    },
+    {
+      "query": "path:\"Concepts/模型评测\"",
+      "color": {
+        "a": 1,
+        "rgb": 9628275
       }
     },
     {
