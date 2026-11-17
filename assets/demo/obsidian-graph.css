@@ -1,0 +1,15 @@
+.graph-view.color-text {
+  color: #f0f4ff;
+}
+
+.graph-view.color-line {
+  color: #657daa;
+}
+
+.graph-view.color-fill-focused {
+  color: #fff098;
+}
+
+.workspace-leaf-content[data-type="graph"] .view-content {
+  background: radial-gradient(ellipse at 48% 44%, #131b30 0%, #08090f 64%, #050609 100%);
+}

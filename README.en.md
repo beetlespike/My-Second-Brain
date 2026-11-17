@@ -12,6 +12,12 @@ On GitHub, choose **Code → Download ZIP**. Unzip it and open the same folder i
 
 You can also start with a short transcript and article included in the download and turn them into a review card. [First-use guide](Guides/First-Run.md)
 
+## Explore the graph in Obsidian
+
+Open Graph view in the example vault to browse six groups of notes. Start with [inference serving](MOCs/推理系统.md) to see how the KV cache supports continuous batching, or [retrieval and generation](MOCs/检索与生成.md) to see how reranked evidence reaches the model.
+
+The example uses six colors for the topics. Pale gold marks topics the AI suggested from existing notes. One suggestion links reranking with prefill. Which evidence fits in the model's input? Try keeping a result, its conditions, and an exception within a fixed [retrieval context budget](待学概念/智能体与检索/检索上下文预算.md). [Graph view and colors](Guides/Graph-View.md)
+
 ## From standard error to correlated observations
 
 A lesson transcript derives the variance of the mean of independent observations. An article explains why taking four times as many observations cuts the standard error of the mean in half. The derivation and the example go on one standard error page, with a link back to each source. Both materials are synthetic. [Video note](Videos/抽样次数与误差.md) · [Article note](Articles/重复抽样与标准误.md) · [Standard error](Concepts/数理基础/标准误.md)

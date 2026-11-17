@@ -1,0 +1,72 @@
+{
+  "collapse-filter": true,
+  "search": "path:Concepts OR file:相关抽样 OR file:检索上下文预算",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": false,
+  "collapse-color-groups": true,
+  "colorGroups": [
+    {
+      "query": "path:\"Concepts/推理系统\"",
+      "color": {
+        "a": 1,
+        "rgb": 16756309
+      }
+    },
+    {
+      "query": "path:\"Concepts/智能体与检索\"",
+      "color": {
+        "a": 1,
+        "rgb": 3204277
+      }
+    },
+    {
+      "query": "path:\"Concepts/研究方法\"",
+      "color": {
+        "a": 1,
+        "rgb": 11705343
+      }
+    },
+    {
+      "query": "path:\"Concepts/数理基础\"",
+      "color": {
+        "a": 1,
+        "rgb": 6990335
+      }
+    },
+    {
+      "query": "path:\"Concepts/信息论\"",
+      "color": {
+        "a": 1,
+        "rgb": 15828161
+      }
+    },
+    {
+      "query": "path:\"Concepts/计算机基础\"",
+      "color": {
+        "a": 1,
+        "rgb": 6610927
+      }
+    },
+    {
+      "query": "path:待学概念 tag:#ai-suggested",
+      "color": {
+        "a": 1,
+        "rgb": 16773248
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": -1,
+  "nodeSizeMultiplier": 1.53,
+  "lineSizeMultiplier": 1.7,
+  "collapse-forces": true,
+  "centerStrength": 0.36,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 160,
+  "scale": 1,
+  "close": true
+}
