@@ -45,6 +45,29 @@ class PublicWorkflowTests(unittest.TestCase):
         deck, _ = review.make_session(self.db, sample_cards(30), '2026-01-02', settings=cfg)
         self.assertEqual((deck['new_count'], deck['review_count']), (0, 2))
 
+    def test_text_feedback_keeps_the_original_question_and_source(self):
+        card = self.cards[0]
+        source = {'path': 'Concepts/均值.md', 'heading': '定义'}
+        card['sources'] = [source]
+        deck, _ = review.make_session(self.db, [card], '2026-01-01')
+        revised = dict(card, front='修订后的题目', version=2, sources=[])
+        context = {'session_date': deck['date'], 'workspace_id': deck['workspace_id']}
+        entry = {'card_id': card['id'], 'version': 1}
+        note = '为什么要先求和？'
+        review.save_feedback(self.db, [revised], dict(
+            context, batch_id='rating', entries=[dict(entry, rating='again')]), '2026-01-02')
+        saved = review.save_feedback(self.db, [revised], dict(
+            context, batch_id='question', entries=[dict(entry, note=note)]), '2026-01-02')
+        self.assertEqual(saved['historical_only'], 1)
+        self.assertEqual(review.feedback_notes(self.root), [
+            {'session_date': deck['date'], 'received': '2026-01-02',
+             'card_id': card['id'], 'version': 1, 'note': note,
+             'question': card['front'], 'sources': [source]}
+        ])
+        unused = self.root / 'unused'
+        self.assertEqual(review.feedback_notes(self.root, unused), [])
+        self.assertFalse(unused.exists())
+
     def test_only_explicit_valid_configuration_is_used(self):
         (self.root / '.secondbrain.json').write_text(json.dumps({'daily_limit': -1}))
         with self.assertRaises(ValueError):

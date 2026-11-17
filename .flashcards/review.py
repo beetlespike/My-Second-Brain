@@ -3,6 +3,7 @@
 
 import argparse
 from collections import Counter
+from contextlib import closing
 from datetime import date, datetime, timedelta
 import hashlib
 import html
@@ -110,7 +111,7 @@ def body_part(body, name):
 
 
 def catalog(root):
-    cards, errors, warnings = [], [], []
+    cards, errors = [], []
     seen, questions = set(), set()
     for p in sorted((root / "Flashcards").rglob("*.md")):
         if not p.resolve().is_relative_to(root.resolve()):
@@ -155,8 +156,6 @@ def catalog(root):
                 if key in questions:
                     raise ValueError(f"重复问题：{c['front']}")
                 questions.add(key)
-                if not 80 <= len(c["back"]) <= 150:
-                    warnings.append(f"{c['id']}：简答 {len(c['back'])} 字符，建议 80–150")
                 reasons = []
                 for src in c["sources"]:
                     try:
@@ -169,7 +168,7 @@ def catalog(root):
                 cards.append(c)
             except (KeyError, ValueError, IndexError, TypeError) as exc:
                 errors.append(f"{p.name}：{exc}")
-    return cards, errors, warnings
+    return cards, errors, []
 
 
 def card_hash(c):
@@ -362,6 +361,31 @@ def save_feedback(db, cards, payload, received):
     return {"saved": count, "duplicates": duplicate, "historical_only": stale}
 
 
+def feedback_notes(root, state_dir=None):
+    """读取最近保存的文字反馈及卡片原有版本。"""
+    path = (state_dir or root / ".flashcards/local") / "review.sqlite3"
+    if not path.exists():
+        return []
+    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
+        db.row_factory = sqlite3.Row
+        rows = db.execute("""
+            SELECT f.day AS session_date, f.received, f.card_id, f.version, f.note, v.payload
+            FROM feedback AS f
+            LEFT JOIN versions AS v ON v.card_id = f.card_id AND v.version = f.version
+            WHERE trim(f.note, char(9, 10, 13, 32)) <> ''
+            ORDER BY f.received DESC, f.sequence DESC
+            LIMIT 20
+        """)
+        notes = []
+        for row in rows:
+            entry = dict(row)
+            card = json.loads(entry.pop("payload") or "{}")
+            entry["question"] = card.get("front")
+            entry["sources"] = [{"path": s["path"], "heading": s["heading"]} for s in card.get("sources", [])]
+            notes.append(entry)
+        return notes
+
+
 def render(root, session, output, *, preview=False, standalone=True):
     template = (root / ".flashcards/viewer.html").read_text(encoding="utf-8")
     display = json.loads(dump(session))
@@ -434,10 +458,14 @@ def main():
                      help="主题和概念覆盖相同时，优先首次推送这些卡片")
     feed = sub.add_parser("feedback")
     feed.add_argument("--input", type=Path, required=True); feed.add_argument("--received-date")
+    sub.add_parser("notes", help="查看最近保存的卡片文字反馈")
     show = sub.add_parser("show")
     show.add_argument("--date")
     args = parser.parse_args()
     root = args.root.resolve()
+    if args.command == "notes":
+        print(dump(feedback_notes(root, args.state_dir)))
+        return
     cfg = settings(root)
     if hasattr(args, 'date') and args.date is None:
         args.date = today(cfg['timezone'])

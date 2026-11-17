@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTE_DIRS = ('Papers', 'Articles', 'Videos', 'Chats', 'Concepts', 'MOCs', '待学概念', 'Flashcards')
 TYPES = dict(Papers='paper', Articles='article', Videos='video', Chats='chat', Concepts='concept', MOCs='moc', Flashcards='flashcard_set')
 SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards')
+DEMO_SOURCES = ('assets/demo/教学字幕.vtt', 'assets/demo/文章原文.md')
 
 
 def files_under(path):
@@ -33,46 +34,63 @@ def review_module(root):
     return module
 
 
-def initialize(source, destination, empty=False):
+def initialize(source, destination, empty=False, *, demo=False):
     source, destination = source.resolve(), destination.resolve()
+    if empty and demo:
+        raise ValueError('请选择空白目录或示例原文')
     if destination == source or destination.is_relative_to(source):
         raise ValueError('请在项目之外选择独立目录，避免嵌套知识库')
     if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
         raise ValueError('目标目录必须为空，已有内容不会被覆盖')
     cfg = review_module(source).settings(source)
     note_dirs = tuple(dict.fromkeys(NOTE_DIRS + tuple(cfg['source_dirs'])))
-    names = SUPPORT + (() if empty else note_dirs + ('assets',))
-    selected = [(p, p.relative_to(source)) for name in names for p in files_under(source / name)]
+    extra = ()
+    if demo:
+        for name in DEMO_SOURCES:
+            path = source / name
+            if not path.is_file() or path.resolve() != path:
+                raise ValueError(f'缺少示例原文 {name}，请从完整模板运行 init --demo')
+        extra = DEMO_SOURCES
+    elif not empty:
+        extra = note_dirs + ('assets',)
+    selected = [(p, p.relative_to(source)) for name in SUPPORT + extra for p in files_under(source / name)]
     destination.mkdir(parents=True, exist_ok=True)
     try:
         for p, relative in selected:
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(p, target)
-        if empty:
+        if empty or demo:
             for name in note_dirs:
                 (destination / name).mkdir(exist_ok=True)
-            (destination / 'MOCs/知识库入口.md').write_text('---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n从一份材料和一个想理解的问题开始。整理后在这里记录概念之间的关系。\n', encoding='utf-8')
+            (destination / 'MOCs/知识库入口.md').write_text(
+                '---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n'
+                '把最近想弄懂的问题和相关笔记留在这里。主题多起来后，可以再加阅读路径。\n',
+                encoding='utf-8')
+            demo_zh = ('从 [教学字幕](assets/demo/教学字幕.vtt) 和 [短文](assets/demo/文章原文.md) 开始。'
+                       '这两份是合成材料，可以按 [第一次使用](Guides/第一次使用.md) 试一遍。\n\n') if demo else ''
+            demo_en = ('Start with the synthetic [transcript](assets/demo/教学字幕.vtt) and [article](assets/demo/文章原文.md). '
+                       'Follow the [first-use guide](Guides/First-Run.md) to work through them.\n\n') if demo else ''
             (destination / 'README.md').write_text(
                 '# My Second Brain\n\n简体中文 | [English](README.en.md) · [MIT](LICENSE)\n\n'
-                '这是你的空白学习目录，保留了指南和工具。视频、文章、论文和对话中的概念可以在这里相互连接，同一个概念由不同来源共同补充。\n\n'
-                '在 Obsidian 与 Codex 中打开同一个目录。给 Codex 一份材料和一个想理解的问题，使用 [整理材料](Prompts/整理材料.md) 开始；从 [知识库入口](MOCs/知识库入口.md) 阅读整理后的内容。\n\n'
-                '有了一些概念后，用 [回顾与补学](Prompts/回顾与补学.md) 寻找共同缺少的前提或方法。选中一个建议后，使用 [带学新概念](Prompts/带学新概念.md) 学习，再用 [每日复习](Prompts/每日复习.md) 准备卡片。\n\n'
-                '操作示例见 [第一次使用](Guides/第一次使用.md)。读取工具可以参考 [来源与工具](Guides/来源与工具.md)，也可以直接提供正文或字幕；命令和设置见 [工具与扩展](Guides/工具与扩展.md)。用顺手后，可以参考 [自动整理与维护](Guides/自动整理与维护.md) 安排定期任务。\n\n'
-                '模板的代码、指南和示例采用 [MIT 许可证](LICENSE)；你导入的材料保留各自的权利与许可。\n',
+                f'{demo_zh}'
+                '用 Obsidian 和 Codex 打开这个目录。给 Codex 一份材料和一个想弄懂的问题，参考 [整理材料](Prompts/整理材料.md) 把概念写入笔记。整理后从 [知识库入口](MOCs/知识库入口.md) 看这些概念怎样相连。\n\n'
+                '再拿一份材料补充已有概念，或从已有笔记里找一个值得继续学的问题。带学、制卡和复习的做法见 [第一次使用](Guides/第一次使用.md)。\n\n'
+                '[读取工具](Guides/来源与工具.md) · [本地命令](Guides/工具与扩展.md) · [定期整理](Guides/自动整理与维护.md)\n\n'
+                '模板采用 [MIT 许可证](LICENSE)。第三方组件和导入的材料适用各自的许可。\n',
                 encoding='utf-8')
             (destination / 'README.en.md').write_text(
                 '# My Second Brain\n\n[简体中文](README.md) | English · [MIT](LICENSE)\n\n'
-                'This is your empty learning folder, with the guides and tools included. Connect concepts from videos, articles, papers, and conversations, and add explanations from different sources to the same concept page.\n\n'
-                'Open this folder in both Obsidian and Codex. Give Codex a source and a question, then use the [material intake prompt](Prompts/整理材料.md). Read the resulting notes from the [knowledge index](MOCs/知识库入口.md).\n\n'
-                'Once you have some concept notes, use [review and further learning](Prompts/回顾与补学.md) to look for missing prerequisites or methods. Choose a suggestion, work through it with [guided learning](Prompts/带学新概念.md), then prepare cards with [daily review](Prompts/每日复习.md).\n\n'
-                'See [First use](Guides/First-Run.md) for a walkthrough and [Sources and tools](Guides/Sources-and-tools.md) for optional readers. You can also supply text or transcripts directly. Commands and settings are in the [tool guide](Guides/工具与扩展.md); [Automation](Guides/Automation.md) covers periodic tasks. The saved prompts and detailed note guides are in Chinese; ask Codex to explain and write notes in your preferred language.\n\n'
-                'The template code, guides, and examples use the [MIT License](LICENSE). Materials you import retain their own rights and licenses.\n',
+                f'{demo_en}'
+                'Open this folder in Obsidian and Codex. Give Codex a source and a question, then use the [intake prompt](Prompts/整理材料.md) to write concept notes. Browse the resulting notes from the [knowledge index](MOCs/知识库入口.md).\n\n'
+                'Bring in another source to add to those concepts, or look for a follow-up question in your existing notes. The [first-use guide](Guides/First-Run.md) walks through studying that question and turning it into a review card.\n\n'
+                '[Reading tools](Guides/Sources-and-tools.md) · [Commands and settings](Guides/工具与扩展.md) · [Scheduled review](Guides/Automation.md)\n\n'
+                'The template uses the [MIT License](LICENSE). Third-party components and materials you import retain their own licenses.\n',
                 encoding='utf-8')
     except Exception:
         # 已写入的文件保留，便于核查失败原因；不会删除用户目录。
         raise
-    return {'created': str(destination), 'example_notes': not empty}
+    return {'created': str(destination), 'example_notes': not (empty or demo)}
 
 
 def prose(text):
@@ -152,10 +170,12 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     init = commands.add_parser('init', help='复制通用工具与可选示例知识到空目录')
     init.add_argument('destination', type=Path)
-    init.add_argument('--empty', action='store_true', help='只保留指南与工具，从自己的材料开始')
+    start = init.add_mutually_exclusive_group()
+    start.add_argument('--empty', action='store_true', help='只保留指南与工具，从自己的材料开始')
+    start.add_argument('--demo', action='store_true', help='带上两份示例原文，从头练习整理')
     commands.add_parser('check', help='只读检查本地链接和来源属性')
     args = parser.parse_args()
-    result = initialize(args.root, args.destination, args.empty) if args.command == 'init' else check(args.root)
+    result = initialize(args.root, args.destination, args.empty, demo=args.demo) if args.command == 'init' else check(args.root)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if result.get('errors'):
         sys.exit(1)

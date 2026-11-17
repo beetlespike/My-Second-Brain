@@ -2,36 +2,34 @@
 
 [简体中文](第一次使用.md)
 
-Start with your own material or the included examples. Adapt these prompts as you go. If you already have concept notes, you can begin with a network review or card review.
+Open the same folder as an Obsidian vault and a Codex project. Try it with your own material or use the two synthetic sources below. To start a blank vault, replace `--demo` with `--empty` in the command.
 
-## Organize a source
+## Try it with two sources
 
-Open the same folder in Obsidian and Codex. Give Codex a link, text, PDF, transcript, or selected conversation, and describe your question:
+Ask Codex to run this from the unzipped template folder, or run it yourself with Python 3.9 or later.
 
-> Follow AGENTS.md to organize this material. I want to understand… Add the relevant concepts to my existing network, keep the sources, and suggest a question worth studying next. Explain and write notes in English.
+```sh
+python3 tools/workflow.py init ../My-Learning-Trial --demo
+```
 
-Open `MOCs/知识库入口.md` to follow the links between sources and concepts. A recurring concept can usually be added to its existing page. The assistant should report unread text, attachments, or images. See [sources and tools](Sources-and-tools.md) for reading options.
+Open the new `My-Learning-Trial` folder in Obsidian and Codex. It contains the transcript and article. You'll make the concept notes and cards as you go. If the folder already exists, choose a fresh name.
 
-For a ready-made example, use `assets/demo/文章原文.md` and `assets/demo/教学字幕.vtt`. Both cover the sample mean, standard error, and sample size, so you can see how two sources share concepts.
+1. Give Codex `assets/demo/教学字幕.vtt`. Ask it to read AGENTS.md and explain why the sample mean varies less with more independent observations. Ask for a concept note with the derivation and timestamps. Open the resulting notes from the knowledge index.
+2. Give it `assets/demo/文章原文.md`. Ask which ideas the article and transcript share. Ask it to add the article's explanation to the existing note and keep both sources. The standard error page should now have the transcript's derivation and the article's explanation of the two kinds of variation.
+3. Ask what assumption the notes share and what you could study if it fails. Check that the suggestion points back to the relevant notes. With your own material, follow whichever connection interests you.
 
-## Choose something to study
+## Work through the question and make a card
 
-Intake may already produce a study suggestion. You can also ask:
+Choose a suggestion and ask Codex to start with a worked example or a question. For this one, try asking it to wait for your reasoning on whether copying every observation changes the standard error. If you pause, save what you worked out and where you'd like to pick up on the study page.
 
-> Look for a missing explanation between these concepts. Suggest one supported topic I can start studying, and explain which existing ideas it connects.
+Once you can explain it, or tell Codex you've learned it, it can move the concept into the main network and update the links. Then try reviewing it.
 
-The statistics example assumes independent sampling, so one follow-up is “What changes when observations are correlated?” Choose a study note that interests you and ask Codex to teach through an example, derivation, or discussion. A variation can help check your understanding. Point out any step that is unclear.
+> Use Prompts/每日复习.md to make one card from what we studied. Check the source and give me the review page to open in a browser. Write the question and answer in English and keep the card format described in the guide.
 
-Your explanations and applications can support a record of learning; AI-generated answers cannot substitute for them. Once understood, a topic can join the main concept network, with incoming links updated and useful questions made into cards.
+Try recalling your answer and click “翻到背面” (flip). Choose a rating or add a question under “补充反馈或指出问题” (add feedback or flag a problem). Click “导出反馈文件” (export feedback file) and give the JSON to Codex to import. After it confirms a successful save, you can ask Codex to retrieve the card question, your note, and its source next time. A day's review set stays fixed. Cards added later appear in a subsequent set. [Card format and feedback](Flashcard-Review.md)
 
-## Review and give feedback
+## Use your own material
 
-> Follow Prompts/每日复习.md to prepare cards for these topics I have studied. Check the sources and give me a review page I can open in a browser.
+Replace the sample transcript and article with something you've watched or read. Start with the question you want to answer. If you already have notes, you can begin with a network review or card review. Relative Markdown links work with other editors, and assistants with file access can follow the same guides. You can add source types and adjust your review intervals.
 
-Try recalling the answer before flipping the card. Choose a rating or write a question, then click “导出反馈文件” (export feedback file). Give the downloaded JSON to Codex to save. Feedback affects later reviews after a successful import; duplicate imports are detected.
-
-A day's review set keeps its original content. Running it again opens the same set; later cards wait for a subsequent set. For a first trial, it helps to finish studying and creating cards before generating the review set. The [card guide](Flashcard-Review.md) contains the format and details.
-
-## Adjust the setup
-
-To start your own vault, ask Codex to initialize a separate empty folder beside the project. Copy the two sample sources if you want to use them there. Folder names, source types, and prompts can change to suit you; see the [tool guide](工具与扩展.md). Once the workflow suits you, consider [periodic organization](Automation.md).
+[Reading tools](Sources-and-tools.md) · [Commands and settings](工具与扩展.md) · [Periodic organization](Automation.md)

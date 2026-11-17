@@ -48,6 +48,19 @@ class WorkflowTests(unittest.TestCase):
         note.write_text(note.read_text(encoding='utf-8') + '\n[Missing note](missing.md)\n', encoding='utf-8')
         self.assertTrue(any('README.en.md' in e and 'missing.md' in e for e in workflow.check(self.root)['errors']))
 
+    def test_demo_starts_with_sources_but_no_concept_notes_or_cards(self):
+        dest = Path(self.tmp.name) / 'demo'
+        result = workflow.initialize(ROOT, dest, demo=True)
+        self.assertFalse(result['example_notes'])
+        files = {f.relative_to(dest).as_posix() for f in (dest / 'assets').rglob('*') if f.is_file()}
+        self.assertEqual(files, {'assets/demo/文章原文.md', 'assets/demo/教学字幕.vtt'})
+        for name in files:
+            self.assertEqual((dest / name).read_bytes(), (ROOT / name).read_bytes())
+        self.assertEqual(list((dest / 'Concepts').rglob('*.md')), [])
+        self.assertEqual(review.catalog(dest), ([], [], []))
+        self.assertFalse((dest / '.flashcards/local').exists())
+        self.assertEqual(workflow.check(dest)['errors'], [])
+
     def test_initialization_never_overwrites_user_content(self):
         dest = Path(self.tmp.name) / 'occupied'
         dest.mkdir()

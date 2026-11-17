@@ -1,76 +1,40 @@
 # My Second Brain
 
-[简体中文](README.md) | English · [MIT](LICENSE)
+[简体中文](README.md) · English · [MIT](LICENSE)
 
-My Second Brain is a local knowledge-base template for Obsidian and Codex. It connects concepts from videos, articles, papers, conversations, and practical work. One source can contribute several concepts; several sources can add to the same concept page.
+Use Obsidian for your notes and Codex to work through the material with you. When a video, an article, or a conversation explains the same idea, add it to the same Markdown note. As those notes build up, Codex can look for an assumption they share and suggest what to study next.
 
-The network can also give you something new to study. During organization or review, the AI looks for missing prerequisites and methods between existing concepts and writes study notes. Choose a topic, work through an explanation or exercise, then revisit it with review cards.
+## Try it with something of your own
 
-## From sources to a concept network
+On GitHub, choose **Code → Download ZIP**. Unzip it and open the same folder in Obsidian and Codex. Give Codex a transcript, an article, or a PDF, along with a question you want to answer.
 
-Suppose you watch a 20-minute video on Bilibili or YouTube about why larger samples tend to make estimates more stable. Organizing the transcript can produce a video note with timestamps and separate pages for the sample mean, standard error, and sample size and precision.
+> Read AGENTS.md first. Help me understand [your question]. Put reusable explanations in concept notes and keep the sources. Add to existing notes when they already cover the idea. If you find a question worth studying next, show me which notes led you to it.
 
-Later, an article on X or WeChat, or a research paper, covers the same formula. Its examples and assumptions can go into the existing concept page. A derivation you discussed with GPT can join them once checked.
+You can also start with a short transcript and article included in the download and turn them into a review card. [First-use guide](Guides/First-Run.md)
 
-```mermaid
-flowchart LR
-    V["Video note"] --> A["Sample mean"]
-    V --> B["Standard error"]
-    T["Article note"] --> B
-    P["Paper or report note"] --> B
-    P --> C["Sample size and precision"]
-    Q["Follow-up question"] --> C
-    A --> B
-    B --> C
-```
+## From standard error to correlated observations
 
-The standard error page brings together explanations and their conditions. The video note links to the concepts it covers. Try the [statistical estimation example](MOCs/统计估计.md); its source texts, transcript, and conversation are synthetic teaching materials.
+A lesson transcript derives the variance of the mean of independent observations. An article explains why taking four times as many observations cuts the standard error of the mean in half. The derivation and the example go on one standard error page, with a link back to each source. Both materials are synthetic. [Video note](Videos/抽样次数与误差.md) · [Article note](Articles/重复抽样与标准误.md) · [Standard error](Concepts/数理基础/标准误.md)
 
-## Learning from the network
+Both sources assume independent observations. Ask Codex what changes when that assumption fails. It can suggest a lesson on correlated observations. Try the opening question yourself. If you copy every row of your data once, does the standard error of the mean get smaller? [Study note](待学概念/数理基础/相关抽样.md)
 
-Standard error, sample size and precision, and paired evaluation all involve assumptions about independence between observations. If the notes cover only independent observations, a review can suggest correlated sampling to fill the shared gap.
+<details>
+<summary>Reveal the answer</summary>
 
-The [suggested study note](待学概念/数理基础/相关抽样.md) asks: if you duplicate every observation, does doubling the row count make the estimate more precise? It includes an explanation and calculation. You can also ask Codex for a variation to solve, without knowing the missing concept's name in advance.
+The sum and the number of rows both double, so the mean stays exactly the same. Its standard error across repeated samples stays the same too. Each copy is perfectly correlated with its original, so the formula for independent observations does not apply.
 
-What you learn joins the concept network; useful questions become review cards. Questions during review can lead to changes in the notes. You can continue learning this way without adding a new source, or defer a suggestion. Progress is recorded from your explanations, derivations, or applications.
+</details>
 
-## Getting started
+Ask Codex to change the example and wait for your reasoning. If you stop halfway through, leave the unresolved step on the study page. Once you understand it, link the concept back to standard error and make a review card. A question left during review can bring you back to the source note next time. [Walk through the example](MOCs/统计估计.md) · [Browse the other topics](MOCs/知识库入口.md)
 
-Download or clone the repository and open the same folder in Obsidian and Codex. Read and edit notes in Obsidian, organize materials and discuss questions in Codex, and open a local HTML page for card review.
+## Use the tools you have
 
-Browse the [knowledge index](MOCs/知识库入口.md), or give Codex your own material:
+The notes are local Markdown. You can edit them by hand or use another assistant with file access. The review tool needs Python 3.9 or later and writes an HTML page you can open offline. Use your own tools for subtitles, web pages, or PDFs, or supply the text directly. Ask Codex for a blank folder if you want to start fresh, or to add a source type or change the review intervals. The sample notes and card interface are in Chinese. You can ask the assistant to write new notes in your language. [Sources and tools](Guides/Sources-and-tools.md) · [Commands and settings](Guides/工具与扩展.md)
 
-> Read AGENTS.md and help me organize this material. My question is… Add its concepts to the existing network, keep the sources, and look for something worth studying next. Explain and write notes in English.
+I keep a personal vault for things I learn in different places, including conversations with ChatGPT and Codex. The same question keeps coming up in different sources. I gave each concept a page so I could add to it and pick up where I'd left off. I also review selected conversations periodically and look at what the notes still leave unexplained. Scheduled collection depends on which conversations your client can read and whether it can write to your local folder. [Periodic organization](Guides/Automation.md)
 
-For a complete walkthrough, see [First use](Guides/First-Run.md). Adapt the prompts, materials, and study order to your needs.
+## Feedback and license
 
-| Example path | Topics |
-| --- | --- |
-| [Statistical estimation](MOCs/统计估计.md) | Sample mean, standard error, sample size and precision, correlated sampling |
-| [Information and prediction](MOCs/信息与预测.md) | Entropy, cross-entropy, KL divergence, perplexity |
-| [Text encoding and tokenization](MOCs/文本编码与分词.md) | UTF-8, byte-level BPE, reversible decoding, tokenization and perplexity |
-| [Research and experiments](MOCs/研究与实验.md) | Testable questions, near-counterexamples, ablations, paired evaluation |
+If you find a broken link, an unclear step, or a source you'd like to use, open an issue and describe what you tried. A public or synthetic example is enough to reproduce a problem. If the workflow fits the way you learn, a Star on GitHub is welcome. [Issues](https://github.com/beetlespike/My-Second-Brain/issues)
 
-There are 15 concept pages and one suggested study note. The examples and saved prompts are in Chinese; Codex can explain them and write new notes in your preferred language. Prompts cover [intake](Prompts/整理材料.md), [further learning](Prompts/回顾与补学.md), [guided study](Prompts/带学新概念.md), and [review](Prompts/每日复习.md).
-
-## Tools for reading materials
-
-The repository includes note guides, examples, link checks, and card tools. Your environment supplies web access, subtitle extraction, PDF parsing, and conversation history. The AI then organizes what it can read into notes and concepts.
-
-[Sources and tools](Guides/Sources-and-tools.md) offers an optional selection: yt-dlp for subtitles, Whisper for audio, Trafilatura for ordinary web pages, and Docling or MinerU for PDFs. You can use your own tools or provide text, transcripts, and selected conversations directly. These extractors are not bundled; connect them as needed.
-
-The local tools need Python 3.9 or later and use its standard library plus bundled KaTeX. No server or Obsidian plugin is required. See the [tool guide](Guides/工具与扩展.md) for commands and settings. Cards use adjustable fixed review intervals; their effect on learning has not been evaluated.
-
-## Periodic organization and maintenance
-
-In my personal vault, I periodically organize authorized Codex and ChatGPT learning conversations and review the relationships between concepts. This relies on history access and local file access in my current desktop environment. Other clients may need exports or manually supplied excerpts.
-
-[Automation and maintenance](Guides/Automation.md) describes this practice, adaptable prompts, and alternatives, along with a separate task for maintaining the public repository. Choose a cadence that suits you. Downloading the template does not create scheduled tasks or read account history.
-
-## Background and other setups
-
-This project grew out of my private Obsidian vault. I wanted concepts from different sources to build on one another and help me find what to study next. Some examples were adapted from that network, with private conversations, experiences, and learning records removed. See [sources and licensing](THIRD-PARTY.md).
-
-You can pair Codex with another Markdown editor, or Obsidian with another AI assistant that can access local files. Manual editing also works. Folders and source types can be extended; see [other sources](Guides/其他来源.md). In editors without Obsidian link support, open the `.md` file at the path shown in the link.
-
-The project's own code, templates, documentation, and examples use the [MIT License](LICENSE). Third-party components and materials you import retain their own rights and licenses. Back up personal review records in `.flashcards/local/` and source caches and processing records in `.local/`. Git ignores both directories; also check note contents for private information before sharing your vault.
+The project code, template, documentation, and examples are under the MIT License. Bundled components and materials you import retain their own licenses. Check note contents and attachments before sharing your own vault. [MIT License](LICENSE) · [Examples and third-party components](THIRD-PARTY.md)
