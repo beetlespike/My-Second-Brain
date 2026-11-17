@@ -14,9 +14,17 @@ You can also start with a short transcript and article included in the download 
 
 ## Explore the graph in Obsidian
 
-Open Graph view in the example vault to browse seven groups of notes. Follow the evidence through [retrieval and generation](MOCs/检索与生成.md), check what went wrong with [model evaluation](MOCs/模型评测.md), and see how extra context affects waiting time in [inference serving](MOCs/推理系统.md).
+![Obsidian Graph view on a dark background. Seven topic groups have distinct colors, and three pale-gold study notes link to related concepts.](assets/demo/obsidian-graph.png)
 
-Pale gold marks study topics suggested by the AI. In [comparing RAG under a latency budget](待学概念/模型评测/延迟预算下比较RAG.md), you can compare retrieval, answer quality, and time to the first output. Which setup would you choose given a limit on how long users can wait? [Graph view and colors](Guides/Graph-View.md)
+On the left, cyan marks text encoding and tokenization, pink information theory, purple research methods, and blue statistics. On the right, orange marks inference serving, teal retrieval, and light green model evaluation.
+
+Pale gold marks study topics the AI suggested from the existing notes. Each page gives you a problem to try.
+
+- [Correlated observations (相关抽样)](待学概念/数理基础/相关抽样.md) connects standard error, sample size, and paired evaluation. Would making a copy of every row give you a more precise estimate?
+- [Context budget for retrieval (检索上下文预算)](待学概念/智能体与检索/检索上下文预算.md) connects retrieval and reranking to the model's prefill stage, when it processes the input. How do you keep the conclusion, conditions, and exception when space is tight?
+- [Comparing RAG under a latency budget (延迟预算下比较RAG)](待学概念/模型评测/延迟预算下比较RAG.md) connects retrieval recall, evidence-backed answers, and serving latency. Which setup would you pick if 95% of requests must start streaming within 850 ms?
+
+To browse the graph yourself, open **Graph view** in the example vault. Hover over a node to see its links or click to read the note. [Graph view and colors](Guides/Graph-View.md)
 
 ## From standard error to correlated observations
 
