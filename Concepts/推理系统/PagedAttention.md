@@ -24,3 +24,9 @@ stage: working
 The block table maps a sequence’s logical positions to physical blocks of [KV Cache](KV%20Cache.md). Requests can grow without reserving their maximum length up front. [Continuous Batching](Continuous%20Batching.md) can put newly freed capacity to use when scheduling its next iteration.
 
 [Efficient Memory Management for Large Language Model Serving with PagedAttention](../../Papers/PagedAttention%20paper.md)
+
+## Sharing a partial block
+
+设每块放四个位置，提示词长六个 token。两条续写 A、B 起初共用两个物理块，第二块还空两格。A 要写第七个位置时，尾块的引用计数是 2。A 复制这块已有的内容，改自己的块表，再写入。B 独占原尾块，随后可以原地追加。第一个满块仍只占一份显存。
+
+In this example, both branches read the same [KV cache](KV%20Cache.md) for the six prompt positions. Only the partial block needs a copy when A first writes to it. The block size and letters are illustrative. [Parallel sampling in the paper](../../Papers/PagedAttention%20paper.md#同一提示的两条续写)

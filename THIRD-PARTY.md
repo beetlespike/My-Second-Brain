@@ -14,7 +14,7 @@ My Second Brain 的目录、来源整理方法、概念与待学页的关系，�
 
 KaTeX 0.19.1，MIT 许可。原许可证保存在 [.flashcards/vendor/KaTeX-LICENSE](.flashcards/vendor/KaTeX-LICENSE)。官方项目为 [KaTeX](https://github.com/KaTeX/KaTeX)，随附脚本来自其发布包，生成界面时嵌入用于离线公式排版。
 
-除这个渲染脚本外，运行工具只使用 Python 标准库和浏览器原生功能。没有捆绑模型权重、网页采集器或论文解析器。
+链接分类、正文提取和本地缓存使用 Python 标准库。视频字幕可调用 yt-dlp，音频转写可复用本地 faster-whisper 和模型，PDF 文字提取可调用 Poppler。可选程序和模型由用户环境提供，并保留各自的许可。
 
 ## 示例材料
 

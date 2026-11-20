@@ -1,6 +1,6 @@
 # 从论文到知识
 
-从用户读过的章节和推导出发，核对论文原文。可以沿用 MinerU、Docling 或其他工具生成的 Markdown，保留页码、章节和图表的位置。
+收到论文链接就查看已有解析或读取公开正文。用户给出章节或推导时优先整理那里。摘要、正文和图表分别记录实际覆盖范围。可以沿用 MinerU、Docling 或其他工具生成的 Markdown，保留页码、章节和图表的位置。
 
 论文页保存到 Papers，使用 `type: paper`、`paper_note_kind: full` 或 `card`、`source_url` 或 `source_path`、`status` 和 `evidence_status`。题名、作者、日期及正式论文链接应可核对。
 

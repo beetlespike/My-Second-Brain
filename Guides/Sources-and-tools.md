@@ -1,29 +1,50 @@
-# Reading materials and choosing tools
+# Reading a source
 
 [简体中文](来源与工具.md)
 
-When organizing something you've studied, use your own explanation or question to point the assistant to the relevant part. It can check the source with the tools you already have. You can also provide the text, a transcript, or an existing conversion.
+Paste a link into the vault’s Codex chat. A phone’s share text can include the title along with the URL. The reader takes one URL at a time. To see what it found and where it saved the text, run this from the vault folder.
 
-| Source | A starting point | Optional tools | What to keep |
-| --- | --- | --- | --- |
-| Bilibili, YouTube, and other videos | Provide a transcript with timestamps, or ask the assistant to check for one | [yt-dlp](https://github.com/yt-dlp/yt-dlp) can retrieve available subtitles; [Whisper](https://github.com/openai/whisper) can transcribe audio you have obtained | Original URL, timestamps, and whether text, audio, or images were actually read |
-| Web pages, X, and WeChat articles | Use an authorized browser reader, paste the text, or save HTML | [Trafilatura](https://trafilatura.readthedocs.io/en/latest/) can extract text from ordinary pages or saved HTML | URL, author, date, and relevant passages; check important images separately |
-| Papers, PDFs, and scans | Read the PDF directly or provide an existing conversion | [Docling](https://docling-project.github.io/docling/) or [MinerU](https://github.com/opendatalab/MinerU); consider OCR for scanned pages | Page, section, equation, and figure references; check important details against the PDF |
-| Codex, ChatGPT, and other conversations | Select a conversation and use the host's history tools, or supply an export | See [automation and maintenance](Automation.md). ChatGPT also offers [data export](https://help.openai.com/en/articles/7260999-exporting-your-chatgpt-history-and-data), subject to account and workspace availability | Questions, follow-ups, corrections, and the message range read; private chat links can stay in your own vault |
-| Books, courses, and practical work | Supply chapters, lecture notes, experimental results, or your own records | Reuse the PDF, video, and text tools, or organize the material manually | Edition, location, experimental conditions, and original results |
+```sh
+python3 tools/intake.py 'https://arxiv.org/abs/2309.06180'
+```
 
-The repository does not bundle these extraction tools. Install or connect them as needed. Subtitle availability, login state, and page restrictions can limit what they read. Check technical terms in transcripts and formulas and figures in PDF conversions.
+| Source | What the reader does | Other ways in |
+| --- | --- | --- |
+| Bilibili and YouTube | Uses yt-dlp to read timed captions for one video. Platform captions and automatic captions are identified separately. With an existing local transcription setup, it can transcribe the public audio when captions are unavailable. | Use the publisher’s captions for the same video, an installed video reader, a transcript from an authorized browser, or SRT/VTT. Slides, descriptions and viewer comments are separate evidence. |
+| WeChat and other articles | Reads the original WeChat article body or the article/main region of an ordinary page. Images require separate inspection. | If the original returns a challenge or a shell, use an authorized browser and supply its saved HTML or text. |
+| Papers | Uses a configured local parse first. An arXiv abstract link tries the HTML, then the PDF at the same version. A PDF link tries the PDF first. It can follow a designated paper PDF from a publisher page. An abstract is labelled separately. | Supply existing MinerU or Docling Markdown, a PDF, or OCR from scanned pages. Check figures and important equations against the original. |
+| Chats, books and practice | Reads selected Markdown or text files. | History access comes from the host. Markdown and plain-text chat exports, excerpts and lab notes work too. [Automation](Automation.md) |
 
-## What the repository provides
+The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/整理材料.md), link checks and review tools. Codex uses the returned evidence to write the source note, check existing concepts and explain links. Learning progress is recorded separately.
 
-The repository includes prompts and two local tools. `tools/workflow.py` creates learning folders and checks links. `.flashcards/review.py` makes the daily page for reviews and new concepts and saves review feedback. Your environment supplies browsers, parsers, and history access. You can extract and link concepts yourself or ask an AI assistant to help.
+### Bring your own reader
 
-To choose a setup, ask:
+```sh
+python3 tools/intake.py lesson.vtt
+python3 tools/intake.py 'https://arxiv.org/abs/2309.06180' --from paper/full.md
+```
 
-> I mainly work with videos, web articles, and papers. Check my existing tools and use this list to suggest the fewest additions I need. Reuse working tools and use a project-local environment for installations. Tell me before any login, payment, or transfer of source material to an external service. Keep the option to provide text or subtitles myself.
+`--from` keeps the original URL while reading a file. Captions and text can use UTF-8 or UTF-16 with a byte-order mark (BOM). A parser export folder containing one Markdown file works too. For video, supply a publisher caption URL or a public course page containing the same video ID and a caption track. Use `--scope excerpt` or `--scope abstract` when that is all the supplied text covers.
 
-## Bringing another tool into the workflow
+To reuse an existing local file automatically, map the exact source URL in `.local/source-files.json`. Relative paths start at that configuration file. The optional map can point to a paper parse, saved captions or an article export.
 
-Readable Markdown, plain text, or VTT with source URLs and page references or timestamps can be used with the [material intake prompt](../Prompts/整理材料.md). Temporary originals can go in `.local/imports/`. Give the ideas you've learned their own concept notes and explain how they relate to other nodes in the vault.
+```json
+{"https://arxiv.org/abs/2309.06180": "parses/pagedattention/full.md"}
+```
 
-You can write your own extractor or connect another service. Try one source first and check for missing text, broken formulas, and lost references before processing a batch. Use each tool's official documentation for current commands and installation requirements.
+### Optional tools
+
+Web pages and text files need only the Python 3.9+ standard library. Reading a PDF’s text layer uses Poppler’s `pdftotext`. For online video captions, the reader uses [yt-dlp](https://github.com/yt-dlp/yt-dlp#dependencies). To install it with pip as shown below, use Python 3.11 or later.
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install yt-dlp
+```
+
+On Windows use `.venv\Scripts\python.exe`. The reader checks PATH, the current Python environment, the vault’s `.venv`, and an existing video-note runtime.
+
+For audio transcription, install [faster-whisper](https://github.com/SYSTRAN/faster-whisper) in that environment and supply local model weights. An existing installation works too. Select a model directory with `--asr-model`, or use `--no-asr` to try captions only. A previously cached small model can be detected automatically. Use `MSB_YTDLP`, `MSB_VIDEO_PYTHON` or `MSB_ASR_MODEL` to point to another installation. An authorized browser handles pages that require login.
+
+### Read the result
+
+`ready` means usable text was found. Check `evidence` for the kind of text. `partial` returns the material available so far. `needs_network` means the shell could not reach the source. The assistant should retry using the host’s network approval. `needs_material` identifies missing evidence. These three statuses return exit code 2. Codex tries available alternatives before asking for missing material. Text and receipts stay in `.local/imports/`. Repeat links reuse a cached result, and `--refresh` reads again. New vaults exclude this cache and personal review records.
