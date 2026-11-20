@@ -13,7 +13,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 NOTE_DIRS = ('Papers', 'Articles', 'Videos', 'Chats', 'Concepts', 'MOCs', '待学概念', 'Flashcards')
 TYPES = dict(Papers='paper', Articles='article', Videos='video', Chats='chat', Concepts='concept', MOCs='moc', Flashcards='flashcard_set')
-SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards')
+SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards', 'Today.command', 'Today.cmd')
 DEMO_SOURCES = ('assets/demo/serving-sources.md', 'assets/demo/streaming-dialogue.md',
                 'assets/demo/first-token.vtt', 'assets/demo/retrieval.md')
 
@@ -61,32 +61,36 @@ def initialize(source, destination, empty=False, *, demo=False):
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(p, target)
+            if relative == Path('Today.command') and sys.platform != 'win32':
+                target.chmod(target.stat().st_mode | 0o111)
         if empty or demo:
             for name in note_dirs:
                 (destination / name).mkdir(exist_ok=True)
             (destination / 'MOCs/知识库入口.md').write_text(
                 '---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n'
-                '想清楚一个问题需要哪些概念？围绕它写一张主题地图，链接到各个节点，再把地图放到这里。同一个概念可以属于几个主题。\n\n'
-                'Start with a question several concepts can help answer. Link the concepts in a topic map, then add the map here.\n',
+                '几个概念能一起回答一个问题时，Codex 会把它们编成主题地图，列在这里。你可以从地图打开各个概念，同一个概念也可以出现在不同地图里。\n\n'
+                'Codex builds topic maps around questions your existing concepts help answer and lists the maps here. Open a map to read its linked notes.\n',
                 encoding='utf-8')
             demo_zh = ('[推理服务的四份材料](assets/demo/serving-sources.md)收录真实视频、文章和论文的入口，以及一段公开改写的对话。'
                        '可从[第一次使用](Guides/第一次使用.md)开始。\n\n') if demo else ''
-            demo_en = ('[Four sources on LLM serving](assets/demo/serving-sources.md) pairs a video, an article and a paper with a rewritten conversation. '
-                       'Follow the [first-use guide](Guides/First-Run.md) to build your network.\n\n') if demo else ''
+            demo_en = ('[Four sources on LLM serving](assets/demo/serving-sources.md) links to a real video, article and paper, alongside a conversation rewritten for public use. '
+                       'Start with the [first-use guide](Guides/First-Run.md).\n\n') if demo else ''
             (destination / 'README.md').write_text(
                 '# My Second Brain\n\n简体中文 | [English](README.en.md) · [MIT](LICENSE)\n\n'
                 f'{demo_zh}'
-                '一份材料往往能让你弄懂几个不同的概念。把每个概念写成能单独读懂的一页，再说清它与别处学过的概念有什么关系。几个节点能一起回答一个问题时，就从[知识库入口](MOCs/知识库入口.md)连进一张主题地图（MOC）。\n\n'
-                '用 Obsidian 阅读，让 Codex 按[整理提示](Prompts/整理材料.md)帮你把学过的概念连起来。还可以请它找出尚未收录、能连接多个已有节点的概念，先标为待学。[开始使用](Guides/第一次使用.md) · [每日知识卡](Guides/自动整理与维护.md)\n\n'
+                '把学过的材料链接交给能读写这个目录的 AI 助手。它读取可用正文，把不同概念各写成一页，连到以前学过的内容，再把能一起回答一个问题的概念编成主题地图（MOC）。你可以从[知识库入口](MOCs/知识库入口.md)打开地图。\n\n'
+                '推荐用 Obsidian 阅读、Codex 整理。让助手按[整理提示](Prompts/整理材料.md)帮你把学过的概念连起来。还可以请它找出尚未收录、能连接多个已有节点的概念，先标为待学。[开始使用](Guides/第一次使用.md) · [每日知识卡](Guides/自动整理与维护.md)\n\n'
+                '每个库都有固定的私人卡片网址。让助手打开，或双击 `Today.command`（macOS）、`Today.cmd`（Windows），收藏它。你随时可以评分、留言。每日助手先答复或修卡，再发下一组，结果在「我的留言与回复」里。\n\n'
                 '[读取工具](Guides/来源与工具.md) · [本地命令](Guides/工具与扩展.md) · [定期整理](Guides/自动整理与维护.md)\n\n'
                 '模板采用 [MIT 许可证](LICENSE)。第三方组件和导入的材料适用各自的许可。\n',
                 encoding='utf-8')
             (destination / 'README.en.md').write_text(
                 '# My Second Brain\n\n[简体中文](README.md) | English · [MIT](LICENSE)\n\n'
                 f'{demo_en}'
-                'A source can teach you several distinct concepts. Give each one a note of its own and explain its connections to things you learned elsewhere. When a group of concepts answers a larger question, make a map of content (MOC) and link it from the [knowledge index](MOCs/知识库入口.md).\n\n'
-                'Read in Obsidian and use the [intake prompt](Prompts/整理材料.md) to have Codex connect what you learned. You can also ask it to identify a missing concept with several links to existing nodes and mark it for study. [Getting started](Guides/First-Run.md) · [Daily knowledge cards](Guides/Automation.md)\n\n'
-                '[Reading tools](Guides/Sources-and-tools.md) · [Commands and settings](Guides/工具与扩展.md) · [Scheduled review](Guides/Automation.md)\n\n'
+                'Give the link to a source you’ve studied to an AI assistant that can read and write this folder. It reads the available material, gives each concept a note, links it to what you’ve already studied and builds a map of content (MOC) when several concepts help answer one question. Open the map from the [knowledge index](MOCs/知识库入口.md).\n\n'
+                'Obsidian and Codex are one recommended pairing. Give your assistant the [intake prompt](Prompts/整理材料.md) to connect what you learned. You can also ask it to identify a missing concept with several links to existing nodes and mark it for study. [Getting started](Guides/First-Run.md) · [Daily knowledge cards](Guides/Automation.md)\n\n'
+                'Each vault has a private card address. Ask your assistant to open it, or double-click `Today.command` on macOS or `Today.cmd` on Windows and bookmark it. Rate cards or leave questions whenever you like. Your daily assistant answers or revises cards before publishing the next deck. See the results in **我的留言与回复** (“My comments and replies”).\n\n'
+                '[Reading tools](Guides/Sources-and-tools.md) · [Local commands](Guides/工具与扩展.md) · [Scheduled source intake](Guides/Automation.md)\n\n'
                 'The template uses the [MIT License](LICENSE). Third-party components and materials you import retain their own licenses.\n',
                 encoding='utf-8')
     except Exception:
@@ -175,11 +179,12 @@ def main():
     init.add_argument('destination', type=Path)
     start = init.add_mutually_exclusive_group()
     start.add_argument('--empty', action='store_true', help='只保留指南与工具，从自己的材料开始')
-    start.add_argument('--demo', action='store_true', help='带上两份示例原文，从头练习整理')
+    start.add_argument('--demo', action='store_true', help='带上示例来源和本地练习材料，从链接开始整理')
     commands.add_parser('check', help='只读检查本地链接和来源属性')
     args = parser.parse_args()
     result = initialize(args.root, args.destination, args.empty, demo=args.demo) if args.command == 'init' else check(args.root)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    ascii_output = not (sys.stdout.encoding or 'utf-8').lower().startswith('utf')
+    print(json.dumps(result, ensure_ascii=ascii_output, indent=2))
     if result.get('errors'):
         sys.exit(1)
 

@@ -2,19 +2,19 @@
 
 [简体中文](自动整理与维护.md)
 
-I periodically go back through my Codex and ChatGPT conversations and save the parts I worked through. One discussion can leave me with several distinct concepts. After linking them to the rest of the network, I ask the assistant to look for questions my topic maps still leave open. Source intake, daily cards, and public repository maintenance can run as separate tasks.
+I set up a Codex automation to read the Codex and ChatGPT study conversations I choose. Codex uses the parts I’ve studied to update concept notes, build topic maps and suggest ideas that connect to what I already know. Source intake, daily cards, and public repository maintenance can run as separate tasks.
 
 ## Daily knowledge cards
 
-Run this in the example vault to get review cards and a card on a new concept. To use your own note, add a `## 知识卡` section with `### 正面` for the question and `### 简答` for the answer. You can write both in your own language. [Card format](Flashcard-Review.md#新概念卡)
+Each vault has a private address. Open Today’s Cards once on the computer that holds the vault and bookmark it. Review, rate or comment whenever you like. Ratings count toward the review schedule as soon as you save them. Written comments appear as pending in **我的留言与回复** (“My comments and replies”). Your assistant handles them the next time it prepares cards. You can ask it to run sooner.
 
-```sh
-python3 .flashcards/review.py session --discovery '待学概念/智能体与检索/Retrieval Context Budget.md'
-```
+Choose an AI assistant that can read and write your vault and run local commands. Schedule the task below for a time that suits you. If the assistant has no scheduler, the computer’s scheduler can launch it. Run the task once during setup so the bookmark starts showing decks published by your assistant.
 
-With access to your local files, a scheduled task can run the command and send you the resulting `output` page path. You can also run it by hand. Omit the option for a review-only day. The page can also contain just the new concept when no review cards are due.
+> Work in this vault using Prompts/每日复习.md. Start with outstanding comments. Answer the question, revise the card or add a related one, then leave me the result. Use what I’ve studied since to update review cards. When a new concept connects ideas in the vault, make a study card. Publish today’s cards at my private address.
 
-> Follow Prompts/每日复习.md to prepare today's cards. Use Prompts/回顾与补学.md to look for a missing concept with several meaningful links to existing nodes. Pick one supported study node that hasn't been sent before, add a knowledge card section if needed, and run session --discovery. Send me the output path and record the date and note path in .local/maintenance.md. Run session on days with only review cards. If neither kind of card is available, say so. Follow up on review questions in the original notes. Use my explanations or exercises to update progress on a study node.
+The bookmark shows the previous deck until a new one is ready. If another local program takes the address, the launcher asks you to retry once it is free and keeps your bookmark. The assistant can retrieve the address with `today --no-open`. For browser-only practice, `daily --on-demand` switches back to selecting cards when you open the page. New vaults use the computer’s local date. Set `timezone` in `.secondbrain.json` if you want a fixed time zone while travelling.
+
+I run the same task in a Codex automation and also receive interactive cards in the chat. Add `--chat-output <path>` when publishing to use both places. **提交到聊天保存** (“Send to chat to save”) and the browser’s **保存反馈** (“Save feedback”) write to the same records. [Card format](Flashcard-Review.md#新概念卡)
 
 ## Check what your environment supports
 

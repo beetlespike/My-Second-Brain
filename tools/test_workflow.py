@@ -5,6 +5,7 @@ from fractions import Fraction
 import importlib.util
 import json
 from math import comb
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -73,6 +74,25 @@ class WorkflowTests(unittest.TestCase):
         source_dirs = {p.relative_to(self.root).parts[0] for p in linked_notes(serving_map)}
         self.assertTrue({'Papers', 'Articles', 'Chats', 'Videos'}.issubset(source_dirs))
 
+    def test_bilingual_homepages_offer_the_same_links_and_figures(self):
+        english_to_chinese = {
+            'README.md': 'README.en.md',
+            'Guides/First-Run.md': 'Guides/第一次使用.md',
+            'Guides/First-Run.md#todays-cards': 'Guides/第一次使用.md#今日知识卡',
+            'Guides/First-Run.md#a-vault-of-your-own': 'Guides/第一次使用.md#自己的学习库',
+            'Guides/First-Run.md#work-through-the-serving-example': 'Guides/第一次使用.md#走一遍推理服务的例子',
+            'Guides/Automation.md': 'Guides/自动整理与维护.md',
+            'Guides/Sources-and-tools.md': 'Guides/来源与工具.md',
+            'assets/demo/human-ai-loop.en.png': 'assets/demo/human-ai-loop.zh.png',
+        }
+
+        def targets(name):
+            text = (self.root / name).read_text(encoding='utf-8')
+            return re.findall(r'(!?)\[[^\]\n]*\]\(([^)\n]+)\)', workflow.prose(text))
+
+        english = [(kind, english_to_chinese.get(url, url)) for kind, url in targets('README.en.md')]
+        self.assertEqual(targets('README.md'), english)
+
     def test_missing_link_in_english_readme_is_reported(self):
         note = self.root / 'README.en.md'
         note.write_text(note.read_text(encoding='utf-8') + '\n[Missing note](missing.md)\n', encoding='utf-8')
@@ -101,7 +121,32 @@ class WorkflowTests(unittest.TestCase):
             workflow.initialize(ROOT, dest)
         self.assertEqual(p.read_text(encoding='utf-8'), '手写内容')
 
+    def test_template_runs_without_zone_data_with_a_legacy_output_encoding(self):
+        env = dict(os.environ, PYTHONTZPATH='', PYTHONIOENCODING='cp1252')
+        python = [sys.executable, '-S', '-B']
+        def run(*args):
+            result = subprocess.run([*python, *args], env=env, capture_output=True, check=True)
+            return json.loads(result.stdout.decode('cp1252'))
+
+        dest = Path(self.tmp.name).resolve() / '学习 vault 🐛'
+        init = run(ROOT / 'tools/workflow.py', 'init', str(dest), '--empty')
+        self.assertEqual(init['created'], str(dest))
+        self.assertEqual(review.settings(dest)['timezone'], 'local')
+        self.assertFalse((dest / '.flashcards/local').exists())
+        cmd = [self.root / '.flashcards/review.py', '--root', self.root]
+        audit = run(*cmd, 'audit')
+        self.assertEqual(audit['eligible'], audit['total'])
+        deck = run(*cmd, 'session')
+        snapshot = run(*cmd, 'show', '--date', deck['date'])
+        self.assertEqual(snapshot['timezone'], 'local')
+        self.assertTrue(snapshot['cards'])
+        self.assertEqual(deck['date'], review.today('local'))
+
     def test_copy_excludes_private_state_and_symlinks(self):
+        private_source = self.root / '.local/imports/material.md'
+        private_source.parent.mkdir(parents=True)
+        private_source.write_text('local source text', encoding='utf-8')
+        (self.root / '.local/source-files.json').write_text('{}', encoding='utf-8')
         (self.root / '.flashcards/local').mkdir(parents=True)
         (self.root / '.flashcards/local/private.txt').write_text('not for copying')
         (self.root / '.git').mkdir()
@@ -109,6 +154,7 @@ class WorkflowTests(unittest.TestCase):
         (self.root / 'Concepts/link.md').symlink_to(Path(self.tmp.name) / 'outside.md')
         dest = Path(self.tmp.name) / 'copy'
         workflow.initialize(self.root, dest)
+        self.assertFalse((dest / '.local').exists())
         self.assertFalse((dest / '.flashcards/local').exists())
         self.assertFalse((dest / '.git').exists())
         self.assertFalse((dest / 'Concepts/link.md').exists())

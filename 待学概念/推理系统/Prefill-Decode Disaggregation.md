@@ -19,8 +19,12 @@ Place the two stages of [Prefill and Decode](../../Concepts/推理系统/Prefill
 
 ### 正面
 
-A handoff moves 2 GB over a 40 GB/s link. It saves 30 ms of waiting. With no overlap, is the transfer paid for? / 拆分省下 30 ms 的等待，搬 2 GB 的 KV，传输能回本吗？
+A handoff moves 2 GB over a 40 GB/s link and saves 30 ms of waiting. With no overlap or other overhead, does it pay off? What if the link runs at 80 GB/s?
+
+拆分能省 30 ms 的等待。2 GB 的 KV 走 40 GB/s 的链路，传输没有重叠，忽略其他开销。这笔账划算吗？换成 80 GB/s 呢？
 
 ### 简答
 
-The transfer alone takes at least 50 ms. With no overlap the handoff costs at least 20 ms more than it saves. Other workloads, faster links or overlap can change the comparison. / 至少要 50 ms。按题设，传输比省下的等待多花至少 20 ms。
+At 40 GB/s the transfer takes 50 ms, so splitting costs 20 ms more than it saves. At 80 GB/s it takes 25 ms, leaving a net saving of 5 ms. Both estimates use the effective transfer rate and the same 30 ms of waiting saved.
+
+按实际可用带宽计算，40 GB/s 时传输用 50 ms，比省下的等待多 20 ms。换成 80 GB/s，传输只用 25 ms，拆分就能净省 5 ms。两次比较都假定能省下同样的 30 ms 等待。

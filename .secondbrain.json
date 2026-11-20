@@ -1,5 +1,5 @@
 {
-  "timezone": "Asia/Shanghai",
+  "timezone": "local",
   "daily_limit": 10,
   "new_limit": 6,
   "concept_limit": 2,
