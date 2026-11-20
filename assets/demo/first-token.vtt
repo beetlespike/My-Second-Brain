@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:15.000
+模型什么时候产生第一个输出？这段合成字幕用 a、b、c 三个输入 token 做例子。
+When does a model produce its first output? This sample transcript starts with three input tokens, a, b and c.
+
+00:00:15.000 --> 00:00:35.000
+在普通的自回归生成中，模型先处理整个提示词。输入位置可以并行计算。处理到 c 的输出就足以选出第一个新 token，记为 d。这是预填充。
+In ordinary autoregressive generation, the model processes the prompt in a prefill pass. Input positions can be computed in parallel. The output at c gives the distribution used to choose the first new token, d.
+
+00:00:35.000 --> 00:00:55.000
+每层都留下 a、b、c 的键和值，称为 KV 缓存。下一步只需送入 d，就能用缓存里的历史来预测 e。此后每生成一步，缓存就多一个位置。
+Each layer keeps the keys and values for a, b and c in its KV cache. The next step takes d as input and uses that history to predict e. Each such step adds one position to the cache.
+
+00:00:55.000 --> 00:01:15.000
+两条请求同时生成，短的先结束。连续合批允许下一轮把空出来的位置分给新请求，长的那条继续生成。还在用的缓存跟着各自的请求走。
+When two requests generate together, the shorter one may finish first. With continuous batching, a new request can join the next iteration while the longer one continues with its own cache.

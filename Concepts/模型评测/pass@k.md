@@ -1,5 +1,6 @@
 ---
 type: concept
+tags: [case-rlvr]
 status: active
 stage: working
 ---
@@ -12,6 +13,12 @@ stage: working
 
 一道题独立生成四份候选，其中两份通过。等概率抽两份共有六种组合，只有抽到两份失败候选的那一组全失败，所以这道题的 pass@2 估计为 5/6。一般地，n 份里有 c 份通过时，用 1 减去从 n−c 份失败候选选 k 份的组合数除以从 n 份选 k 份的组合数。先按题计算，再汇总。
 
-对同一生成策略独立采样是把这个估计解释为重新生成 k 次的前提。复制一个输出，或把前一次失败的反馈交给下一轮，都会改变采样过程。把多份相关记录当成独立机会时，可以回看[相关抽样](../../待学概念/数理基础/相关抽样.md)。比较两个模型，还应给它们相同的题目、测试规则和尝试次数。[配对评测](../研究方法/配对评测.md)
+对同一生成策略独立采样是把这个估计解释为重新生成 k 次的前提。复制一个输出，或把前一次失败的反馈交给下一轮，都会改变采样过程。把多份相关记录当成独立机会时，可以回看[相关抽样](../../待学概念/数理基础/Correlated%20Sampling.md)。比较两个模型，还应给它们相同的题目、测试规则和尝试次数。[配对评测](../研究方法/Paired%20Evaluation.md)
 
 [HumanEval 论文第 2.1 节](https://arxiv.org/abs/2107.03374)
+
+## pass@k
+
+For each problem, count success if at least one of k sampled solutions passes. Average over problems. A fixed [Generation Budget](../强化学习/Generation%20Budget.md) and [Sampling Temperature](../强化学习/Sampling%20Temperature.md) make comparisons interpretable. Inspecting the per-problem outcomes can reveal different solved sets under equal averages.
+
+[Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?](../../Papers/RLVR%20at%20Large%20k.md)

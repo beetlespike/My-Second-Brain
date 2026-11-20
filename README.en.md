@@ -1,27 +1,31 @@
 # My Second Brain
 
-[简体中文](README.md) · English · [MIT](LICENSE)
+[简体中文](README.md) · English
 
-Keep your notes in Obsidian and study with Codex. Add explanations from videos, papers, or conversations to the same concept note. Codex can follow the links between notes to suggest what to study next.
+My Second Brain is a local Markdown template for building a knowledge network in Obsidian. Codex helps connect the concepts you’ve learned and uses those connections to suggest new ones for your daily cards.
 
-[First-use guide](Guides/First-Run.md) · [Browse the example notes](MOCs/知识库入口.md)
+[Start with your own material](Guides/First-Run.md) · [Explore the example in Obsidian](Guides/Graph-View.md)
 
-![Obsidian Graph view on a dark background. Blue-gray nodes are existing concepts. Pale gold nodes are AI study suggestions.](assets/demo/obsidian-graph.png)
+## An ordinary week
 
-Blue-gray is for existing concepts and pale gold is for AI study suggestions. [Comparing RAG under a latency budget](待学概念/模型评测/延迟预算下比较RAG.md) puts retrieval recall, answer quality, and wait time into one exercise. [Open the graph in Obsidian](Guides/Graph-View.md)
+I send Codex a Bilibili video I’ve watched and tell it what I learned. Two notes come out of it, *KV Cache* and *Prefill and Decode*. A WeChat article I read the next day gives me an example for my note on memory bandwidth. [KV cache video](https://www.bilibili.com/video/BV1jAZwBGEwi/) · [Article on pretraining engineers](https://mp.weixin.qq.com/s/Wt_HyaK98tPF39p1y6eMow)
 
-## Try it with your own material
+I also watch part of a lecture on tokenizers. While reading *Sarathi-Serve*, I ask ChatGPT how to measure a pause halfway through a reply. [Lecture on YouTube](https://www.youtube.com/watch?v=zduSFxRajkE&t=1430s) · [Paper](https://www.usenix.org/conference/osdi24/presentation/agrawal) · [Rewritten conversation](assets/demo/streaming-dialogue.md)
 
-On GitHub, choose **Code → Download ZIP**, then unzip it. Open the same folder in Obsidian and Codex. Give Codex a source and a question you want to answer.
+## Sunday notes
 
-> Read AGENTS.md. Help me answer my question using this source. Add explanations I can reuse to the concept notes and keep the sources. Suggest a follow-up question if you find one worth studying.
+I’ve set Codex to revisit the study chats I choose. Looking back on Sunday, I see how the timing example fits with the cache and bandwidth notes. LLM serving turns out to be one subject I’ve been studying. I gather those pages into a map of content (MOC) for a closer look at the pause. Tokenization gets its own map. [LLM serving](MOCs/Streaming%20LLM%20Serving.md) · [Multilingual tokenizers](MOCs/Multilingual%20Tokenizers.md)
 
-The sample [video](Videos/抽样次数与误差.md) and [article](Articles/重复抽样与标准误.md) contribute to the same [standard error note](Concepts/数理基础/标准误.md). Both are synthetic and assume independent observations. That assumption led Codex to suggest [correlated observations](待学概念/数理基础/相关抽样.md). If you duplicate every row in a dataset, does the mean's standard error shrink? Work it out, then have Codex help where you get stuck and make a review card. [Try the full example](Guides/First-Run.md)
+![Native Obsidian graph of LLM serving. Blue-gray marks concepts learned from sources. Pale gold marks three suggested study nodes.](assets/demo/obsidian-serving.png)
 
-## Use the tools you have
+## Two cards in the morning
 
-The same questions kept turning up in papers, courses, and chats. I wanted one page I could come back to, with the sources still there. [Periodic review](Guides/Automation.md)
+One card revisits the pause. Another introduces *prefill-decode disaggregation*, one of the pale gold nodes Codex suggested from my notes on caching and scheduling. Once I’ve studied it, it can join the review deck.
 
-The notes are local Markdown. Use your own editor, source reader, or AI assistant with file access. The review tool uses Python 3.9 or later to generate a page you can open offline. The sample notes and review interface are in Chinese. [Sources and tools](Guides/Sources-and-tools.md) · [Add sources or change review settings](Guides/工具与扩展.md)
+I flip the review card, mark it “a little hazy” and leave a note underneath asking for a different example. I send that feedback to Codex so it can revise the question and schedule the next review. [Try the cards](Guides/First-Run.md#work-through-the-serving-example)
 
-Code, templates, and examples are [MIT licensed](LICENSE). [Third-party components and imported material](THIRD-PARTY.md) have their own licenses. If you run into a problem, [open an issue](https://github.com/beetlespike/My-Second-Brain/issues) with a public or synthetic example.
+![Full native Obsidian graph, including LLM serving, multilingual tokenization and reinforcement learning.](assets/demo/obsidian-graph.png)
+
+The notes work with other Markdown editors and assistants. Set up scheduled tasks locally, or share material by hand. [Source readers](Guides/Sources-and-tools.md) · [Automation and daily cards](Guides/Automation.md)
+
+[More topic maps](MOCs/知识库入口.md) · [MIT license](LICENSE) · [Third-party materials](THIRD-PARTY.md) · [Feedback](https://github.com/beetlespike/My-Second-Brain/issues)

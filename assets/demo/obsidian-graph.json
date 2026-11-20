@@ -11,7 +11,7 @@
       "query": "path:待学概念 tag:#ai-suggested",
       "color": {
         "a": 1,
-        "rgb": 16773248
+        "rgb": 15717273
       }
     },
     {
@@ -28,10 +28,10 @@
   "nodeSizeMultiplier": 1.53,
   "lineSizeMultiplier": 1.7,
   "collapse-forces": true,
-  "centerStrength": 0.36,
-  "repelStrength": 10,
+  "centerStrength": 0.39,
+  "repelStrength": 11.2,
   "linkStrength": 1,
-  "linkDistance": 160,
-  "scale": 1,
+  "linkDistance": 175,
+  "scale": 0.67,
   "close": true
 }

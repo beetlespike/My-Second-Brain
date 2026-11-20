@@ -1,27 +1,31 @@
 # My Second Brain
 
-简体中文 · [English](README.en.md) · [MIT](LICENSE)
+简体中文 · [English](README.en.md)
 
-用 Obsidian 管理笔记，用 Codex 整理材料和带学。视频、文章、论文或对话讲到同一个概念，就补进同一页。Codex 可以沿着这些笔记的联系，找出值得接着学的问题。
+My Second Brain 是一套本地 Markdown 模板。你从各处学到的概念，在 Obsidian 里连成一张自己的知识网。Codex 帮你整理，也会沿着已有的联系找出你还没学过的概念，做成知识卡。
 
-[第一次使用](Guides/第一次使用.md) · [浏览示例笔记](MOCs/知识库入口.md)
+[用自己的材料开始](Guides/第一次使用.md) · [在 Obsidian 里看示例](Guides/Graph-View.md)
 
-![黑底 Obsidian 关系图谱。灰蓝色是已有概念，淡金色是 AI 提出的待学建议。](assets/demo/obsidian-graph.png)
+## 平凡的一周
 
-灰蓝色是已有概念，淡金色是 AI 建议接着学的题。[延迟预算下比较 RAG](待学概念/模型评测/延迟预算下比较RAG.md)把检索召回、答案质量和等待时间放进同一道选型题。[在 Obsidian 打开图谱](Guides/Graph-View.md)
+看完一段 B 站视频，我把链接发给 Codex，说说自己看懂的部分。「KV 缓存」和「预填充与解码」各写成一页。隔天读公众号，文章里的一个例子又补进了原有的「显存带宽」笔记。[6 分钟讲 KV 缓存](https://www.bilibili.com/video/BV1jAZwBGEwi/) · [预训练工程师在干什么](https://mp.weixin.qq.com/s/Wt_HyaK98tPF39p1y6eMow)
 
-## 拿一份材料试试
+这几天还看了段分词课。读 *Sarathi-Serve* 时，我和 GPT 算过一段回答中途停了多久。[YouTube 分词课](https://www.youtube.com/watch?v=zduSFxRajkE&t=1430s) · [论文](https://www.usenix.org/conference/osdi24/presentation/agrawal) · [改写对话](assets/demo/streaming-dialogue.md)
 
-在 GitHub 点 **Code → Download ZIP** 并解压。用 Obsidian 和 Codex 打开同一个文件夹，把材料和一个想弄懂的问题交给 Codex。
+## 周末翻笔记
 
-> 请读 AGENTS.md。用这份材料帮我理解这个问题，把能复用的解释补进概念页，留好出处。也看看有没有值得接着学的问题。
+我让 Codex 定期整理选好的学习对话。周末把那次停顿的算例和缓存、带宽放在一起，才看出这几页都和推理服务有关。我把它们编成一张主题地图（MOC），想细读时，就从「回答为什么会停在半句」读起。分词另有一张。[推理服务](MOCs/Streaming%20LLM%20Serving.md) · [多语言分词](MOCs/Multilingual%20Tokenizers.md)
 
-示例里的[视频](Videos/抽样次数与误差.md)和[短文](Articles/重复抽样与标准误.md)是合成材料。它们都补进了[标准误](Concepts/数理基础/标准误.md)，也都假设观测独立。Codex 顺着这个条件提出了[相关抽样](待学概念/数理基础/相关抽样.md)。把数据表的每一行复制一次，均值的标准误会变小吗？先自己算，再请 Codex 讲卡住的那一步，做张复习卡。[从原文试到复习](Guides/第一次使用.md)
+![Obsidian 原生推理服务图谱。灰蓝色是学过的概念，三个淡金色节点是 Codex 建议补学的概念。](assets/demo/obsidian-serving.png)
 
-## 按自己的习惯用
+## 清晨的两张卡
 
-我常在论文、课程和对话里碰到同一个问题。我想下次回来时能接着学，所以把解释留在一页，分别记下出处。[定期整理](Guides/自动整理与维护.md)
+早上的卡片里有一道关于那次停顿的旧题，也有一个新概念「预填充与解码分离」。图里这个淡金色的节点，是 Codex 顺着缓存和调度笔记找到的。等我弄懂了，就请它用这个概念出复习题。
 
-笔记是本地 Markdown，编辑器、AI 助手和材料读取工具都可以换。卡片用 Python 3.9 或更新版本生成，在浏览器里离线复习。[来源与工具](Guides/来源与工具.md) · [添加来源和调整复习](Guides/工具与扩展.md)
+翻过旧卡，我选了「有点模糊」，又留了句“下次换个例子”。把反馈交给 Codex，它会按评分安排复习，也能照着留言改题。[试试这组卡片](Guides/第一次使用.md#走一遍推理服务的例子)
 
-代码、模板和示例用 [MIT](LICENSE)。[第三方组件与导入材料](THIRD-PARTY.md)适用各自的许可。试用遇到问题，欢迎用公开或合成材料[提个 Issue](https://github.com/beetlespike/My-Second-Brain/issues)。
+![完整的 Obsidian 关系图谱，包括推理服务、多语言分词、强化学习等主题。](assets/demo/obsidian-graph.png)
+
+笔记都是普通的 Markdown，可以换编辑器和 AI 助手。定时任务在自己的环境里设置，也可以手动提供材料。[来源与工具](Guides/来源与工具.md) · [自动整理与每日卡片](Guides/自动整理与维护.md)
+
+[更多主题地图](MOCs/知识库入口.md) · [MIT 许可](LICENSE) · [第三方材料](THIRD-PARTY.md) · [反馈](https://github.com/beetlespike/My-Second-Brain/issues)

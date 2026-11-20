@@ -82,10 +82,12 @@ def markdown_structure(text):
     return lines, headings
 
 
-def section(text, heading):
-    """取得指定 Markdown 标题及其子节；重名标题须先消歧。"""
+def section(text, heading, *, required=True):
+    """返回唯一的 Markdown 小节。可选小节缺失时返回空文本。"""
     lines, headings = markdown_structure(text)
     hits = [(i, level) for i, level, title in headings if title == heading]
+    if not hits and not required:
+        return ""
     if len(hits) != 1:
         raise ValueError(f"来源标题需要唯一匹配：{heading}，实际 {len(hits)} 处")
     start, level = hits[0]
@@ -106,8 +108,23 @@ def source_text(root, source):
     return section(p.read_text(encoding="utf-8"), source["heading"])
 
 
-def body_part(body, name):
-    return section(body, name).split("\n", 1)[1].strip()
+def body_part(body, name, *, required=True):
+    return section(body, name, required=required).partition("\n")[2].strip()
+
+
+def read_discovery_card(root, relative):
+    path = (root / relative).resolve()
+    if path.suffix != '.md' or not path.is_relative_to(root / '待学概念'):
+        raise ValueError('新概念卡须来自当前学习目录的「待学概念」Markdown 笔记')
+    text = path.read_text(encoding='utf-8')
+    _, headings = markdown_structure(text)
+    title = next((title for _, level, title in headings if level == 1), path.stem)
+    card = section(text, '知识卡')
+    front = section(card, '正面').partition('\n')[2].strip()
+    back = section(card, '简答').partition('\n')[2].strip()
+    if not front or not back:
+        raise ValueError(f'{path.name}：知识卡需要题目和简答')
+    return {'path': path.relative_to(root).as_posix(), 'title': title, 'front': front, 'back': back}
 
 
 def catalog(root):
@@ -149,7 +166,7 @@ def catalog(root):
                 seen.add(c["id"])
                 body = block[match.end():]
                 c.update(front=body_part(body, "正面"), back=body_part(body, "简答"),
-                         details=body_part(body, "展开"), card_file=str(p.relative_to(root)))
+                         details=body_part(body, "展开", required=False), card_file=str(p.relative_to(root)))
                 if not c["front"] or not c["back"] or not c["sources"]:
                     raise ValueError("正面、简答和来源均不能为空")
                 key = re.sub(r"\s+", "", c["front"])
@@ -230,7 +247,7 @@ def register(db, cards):
                    (c["id"], c["version"], card_hash(c), dump(c)))
 
 
-def make_session(db, cards, day, preferred_new=(), *, settings=None):
+def make_session(db, cards, day, preferred_new=(), *, settings=None, allow_empty=False):
     cfg = settings or dict(daily_limit=DAILY_LIMIT, new_limit=NEW_LIMIT, concept_limit=2,
                            interval_days=INTERVALS, timezone='Asia/Shanghai')
     date.fromisoformat(day)
@@ -294,6 +311,9 @@ def make_session(db, cards, day, preferred_new=(), *, settings=None):
                    "new_count": sum(c["presentation"] == "new" for c in chosen),
                    "review_count": sum(c["presentation"] == "review" for c in chosen)}
         if not chosen:
+            if allow_empty:
+                db.rollback()
+                return session, False
             raise ValueError("当天没有可用或到期的卡片；可等待下次复习，或检查来源与状态。")
         db.execute("INSERT INTO sessions VALUES (?, ?)", (day, dump(session)))
         db.commit()
@@ -386,7 +406,7 @@ def feedback_notes(root, state_dir=None):
         return notes
 
 
-def render(root, session, output, *, preview=False, standalone=True):
+def render(root, session, output, *, preview=False, standalone=True, discovery=None):
     template = (root / ".flashcards/viewer.html").read_text(encoding="utf-8")
     display = json.loads(dump(session))
     if preview:
@@ -400,8 +420,10 @@ def render(root, session, output, *, preview=False, standalone=True):
     old = [c for c in available if c["presentation"] == "review"][:limits['daily_limit'] - len(new)]
     display["cards"] = sorted(old + new, key=lambda c: c["position"])
     display["omitted_count"] = len(session["cards"]) - len(display["cards"])
-    if not display["cards"]:
+    if not display["cards"] and discovery is None:
         raise ValueError("当日卡组已全部退出复习范围，原快照仍可通过 show 查看")
+    if discovery is not None:
+        display['discovery'] = discovery
     display["new_count"] = sum(c["presentation"] == "new" for c in display["cards"])
     display["review_count"] = sum(c["presentation"] == "review" for c in display["cards"])
     for c in display["cards"]:
@@ -455,6 +477,7 @@ def main():
     ses = sub.add_parser("session")
     ses.add_argument("--date"); ses.add_argument("--output", type=Path)
     ses.add_argument('--fragment', action='store_true', help='输出可嵌入聊天的 HTML 片段')
+    ses.add_argument('--discovery', type=Path, metavar='NOTE', help='附上一篇待学笔记的新概念卡')
     ses.add_argument("--prefer-new", nargs="+", default=(), metavar="CARD_ID",
                      help="主题和概念覆盖相同时，优先首次推送这些卡片")
     feed = sub.add_parser("feedback")
@@ -477,6 +500,7 @@ def main():
     if args.command == "source-hash":
         print(digest(source_text(root, {"path": args.path, "heading": args.heading})))
         return
+    discovery = read_discovery_card(root, args.discovery) if args.command == 'session' and args.discovery else None
     cards, errors, warnings = catalog(root)
     if args.command == "audit":
         print(dump({"total": len(cards), "eligible": sum(c["eligible"] for c in cards),
@@ -487,7 +511,7 @@ def main():
         return
     if errors:
         raise ValueError("；".join(errors))
-    with connect(root, args.state_dir) as db:
+    with closing(connect(root, args.state_dir)) as db, db:
         if args.command == "scan":
             print(dump(scan_sources(db, root)))
         elif args.command == "ack-sources":
@@ -495,11 +519,15 @@ def main():
                 acknowledge_source(db, root, path)
             print(dump({"acknowledged": len(args.paths)}))
         elif args.command == "session":
-            session, reused = make_session(db, cards, args.date, args.prefer_new, settings=cfg)
-            display = render(root, session, args.output, standalone=not args.fragment)
-            print(dump({"date": args.date, "count": len(display["cards"]), "new": display["new_count"],
-                        "review": display["review_count"], "omitted": display["omitted_count"],
-                        "reused": reused, "output": str(args.output.resolve())}))
+            session, reused = make_session(db, cards, args.date, args.prefer_new,
+                                           settings=cfg, allow_empty=discovery is not None)
+            display = render(root, session, args.output, standalone=not args.fragment, discovery=discovery)
+            result = {"date": args.date, "count": len(display["cards"]), "new": display["new_count"],
+                      "review": display["review_count"], "omitted": display["omitted_count"],
+                      "reused": reused, "output": str(args.output.resolve())}
+            if discovery is not None:
+                result['discovery'] = discovery['path']
+            print(dump(result))
         elif args.command == "feedback":
             print(dump(save_feedback(db, cards, json.loads(args.input.read_text(encoding="utf-8")), args.received_date)))
         elif args.command == "show":

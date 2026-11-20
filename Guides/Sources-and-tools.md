@@ -2,7 +2,7 @@
 
 [简体中文](来源与工具.md)
 
-Start with the reading tools already available to your AI assistant. If something is missing, provide the text or add a tool for that source. These are options; you can keep using tools that work for you.
+When organizing something you've studied, use your own explanation or question to point the assistant to the relevant part. It can check the source with the tools you already have. You can also provide the text, a transcript, or an existing conversion.
 
 | Source | A starting point | Optional tools | What to keep |
 | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ The repository does not bundle these extraction tools. Install or connect them a
 
 ## What the repository provides
 
-It includes note guides, concept and card examples, prompts, and two local tools: `tools/workflow.py` initializes folders and checks links; `.flashcards/review.py` checks cards, generates review sets, and saves feedback. Your environment supplies browsers, parsers, and history access. The AI assistant follows the guides to extract concepts, connect them, and teach; you can also do this manually.
+The repository includes prompts and two local tools. `tools/workflow.py` creates learning folders and checks links. `.flashcards/review.py` makes the daily page for reviews and new concepts and saves review feedback. Your environment supplies browsers, parsers, and history access. You can extract and link concepts yourself or ask an AI assistant to help.
 
 To choose a setup, ask:
 
@@ -24,6 +24,6 @@ To choose a setup, ask:
 
 ## Bringing another tool into the workflow
 
-Readable Markdown, plain text, or VTT with source URLs and page references or timestamps can be used with the [material intake prompt](../Prompts/整理材料.md). Temporary originals can go in `.local/imports/`; source notes go in their corresponding folders. Add recurring concepts to existing pages.
+Readable Markdown, plain text, or VTT with source URLs and page references or timestamps can be used with the [material intake prompt](../Prompts/整理材料.md). Temporary originals can go in `.local/imports/`. Give the ideas you've learned their own concept notes and explain how they relate to other nodes in the vault.
 
 You can write your own extractor or connect another service. Try one source first and check for missing text, broken formulas, and lost references before processing a batch. Use each tool's official documentation for current commands and installation requirements.

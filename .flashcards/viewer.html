@@ -36,60 +36,74 @@ __MATH_RENDERER__
     <h3 data-role="heading">今日知识卡片</h3>
     <p class="text-small text-muted" data-role="summary"></p>
   </div>
-  <div class="viz-row" aria-live="polite">
-    <span class="tabular-nums" data-role="position"></span>
-    <span class="text-small" data-role="kind"></span>
-    <span class="text-small text-muted" data-role="topic"></span>
-  </div>
-  <div class="progress fc-space" role="progressbar" aria-label="当前卡片位置" aria-valuemin="0" aria-valuemax="10" data-role="progress">
-    <div class="progress-bar" data-role="bar" style="width:0%"></div>
-  </div>
-  <div class="card cursor-interaction" data-role="card">
-    <div class="fc-face" data-role="face">
-      <p class="text-small" data-role="concept"></p>
-      <h3 data-role="question"></h3>
-      <p class="text-small" data-role="snapshot-warning" hidden></p>
-      <div data-role="answer" hidden>
-        <div class="fc-body" data-role="back"></div>
-        <details class="fc-space" data-role="details">
-          <summary>展开解释</summary>
-          <div class="fc-body fc-space" data-role="detail-body"></div>
-        </details>
-        <details class="fc-space" data-role="sources">
-          <summary>查看来源</summary>
-          <div data-role="source-list"></div>
-        </details>
+  <section class="card fc-space" data-role="discovery" hidden aria-labelledby="__ROOT_ID__-discovery-title">
+    <p class="text-small text-muted">新概念</p>
+    <h3 id="__ROOT_ID__-discovery-title" data-role="discovery-title"></h3>
+    <div class="fc-body" data-role="discovery-front"></div>
+    <details class="fc-space">
+      <summary>查看解释</summary>
+      <div class="fc-body fc-space" data-role="discovery-back"></div>
+    </details>
+    <p class="text-small fc-source">
+      <a data-role="discovery-link">在 Obsidian 打开</a> · <span data-role="discovery-path"></span>
+    </p>
+  </section>
+  <div data-role="review" hidden>
+    <div class="viz-row" aria-live="polite">
+      <span class="tabular-nums" data-role="position"></span>
+      <span class="text-small" data-role="kind"></span>
+      <span class="text-small text-muted" data-role="topic"></span>
+    </div>
+    <div class="progress fc-space" role="progressbar" aria-label="当前卡片位置" aria-valuemin="0" aria-valuemax="10" data-role="progress">
+      <div class="progress-bar" data-role="bar" style="width:0%"></div>
+    </div>
+    <div class="card cursor-interaction" data-role="card">
+      <div class="fc-face" data-role="face">
+        <p class="text-small" data-role="concept"></p>
+        <h3 data-role="question"></h3>
+        <p class="text-small" data-role="snapshot-warning" hidden></p>
+        <div data-role="answer" hidden>
+          <div class="fc-body" data-role="back"></div>
+          <details class="fc-space" data-role="details">
+            <summary>展开解释</summary>
+            <div class="fc-body fc-space" data-role="detail-body"></div>
+          </details>
+          <details class="fc-space" data-role="sources">
+            <summary>查看来源</summary>
+            <div data-role="source-list"></div>
+          </details>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="viz-row fc-space">
-    <button class="btn" type="button" data-role="prev" aria-label="上一张卡片">上一张</button>
-    <button class="btn btn-primary" type="button" data-role="flip" aria-expanded="false">翻到背面</button>
-    <button class="btn" type="button" data-role="next" aria-label="下一张卡片">下一张</button>
-  </div>
-  <div data-role="feedback" hidden>
-    <div class="viz-row" aria-label="可选反馈">
-      <button class="btn" type="button" data-rating="again" aria-pressed="false">没想起来</button>
-      <button class="btn" type="button" data-rating="uncertain" aria-pressed="false">有点模糊</button>
-      <button class="btn" type="button" data-rating="familiar" aria-pressed="false">比较熟悉</button>
+    <div class="viz-row fc-space">
+      <button class="btn" type="button" data-role="prev" aria-label="上一张卡片">上一张</button>
+      <button class="btn btn-primary" type="button" data-role="flip" aria-expanded="false">翻到背面</button>
+      <button class="btn" type="button" data-role="next" aria-label="下一张卡片">下一张</button>
     </div>
-    <details class="fc-space" data-role="note-details">
-      <summary>补充反馈或指出问题</summary>
-      <label class="form-label">这张卡片的反馈
-        <textarea class="form-control" rows="2" maxlength="300" data-role="note" placeholder="例如：这个例子还没看懂"></textarea>
+    <div data-role="feedback" hidden>
+      <div class="viz-row" aria-label="可选反馈">
+        <button class="btn" type="button" data-rating="again" aria-pressed="false">没想起来</button>
+        <button class="btn" type="button" data-rating="uncertain" aria-pressed="false">有点模糊</button>
+        <button class="btn" type="button" data-rating="familiar" aria-pressed="false">比较熟悉</button>
+      </div>
+      <details class="fc-space" data-role="note-details">
+        <summary>补充反馈或指出问题</summary>
+        <label class="form-label">这张卡片的反馈
+          <textarea class="form-control" rows="2" maxlength="300" data-role="note" placeholder="例如：这个例子还没看懂"></textarea>
+        </label>
+      </details>
+    </div>
+    <div class="viz-row fc-space" data-role="submit-row">
+      <button class="btn" type="button" data-role="submit" disabled>提交反馈</button>
+      <span class="text-small text-muted" data-role="draft-count">反馈可选</span>
+    </div>
+    <p class="text-small" data-role="message" aria-live="polite"></p>
+    <p class="text-small text-muted">点击卡片或按空格翻面，左右方向键切换。</p>
+    <div data-role="fallback" hidden>
+      <label class="form-label">请复制到当前聊天发送
+        <textarea class="form-control" rows="5" readonly data-role="fallback-text"></textarea>
       </label>
-    </details>
-  </div>
-  <div class="viz-row fc-space" data-role="submit-row">
-    <button class="btn" type="button" data-role="submit" disabled>提交反馈</button>
-    <span class="text-small text-muted" data-role="draft-count">反馈可选</span>
-  </div>
-  <p class="text-small" data-role="message" aria-live="polite"></p>
-  <p class="text-small text-muted">点击卡片或按空格翻面，左右方向键切换。</p>
-  <div data-role="fallback" hidden>
-    <label class="form-label">请复制到当前聊天发送
-      <textarea class="form-control" rows="5" readonly data-role="fallback-text"></textarea>
-    </label>
+    </div>
   </div>
 </div>
 <script>
@@ -97,6 +111,7 @@ __MATH_RENDERER__
   const root = document.getElementById('__ROOT_ID__');
   const deck = __DECK_DATA__;
   const el = name => root.querySelector('[data-role="' + name + '"]');
+  const noteLink = path => 'obsidian://open?vault=' + encodeURIComponent(deck.vault_name || '') + '&file=' + encodeURIComponent(path);
   const ratings = ['again', 'uncertain', 'familiar'];
   let index = 0, flipped = false, drafts = {}, submission = null;
   let busy = false, touched = false;
@@ -162,6 +177,24 @@ __MATH_RENDERER__
     });
   }
 
+  el('heading').textContent = deck.date + (deck.preview ? ' · 修订后的解释' : ' · 知识卡片');
+  const counts = [];
+  if (deck.preview) counts.push(deck.cards.length + ' 张修订卡片');
+  else if (deck.cards.length) counts.push(deck.review_count + ' 张复习', deck.new_count + ' 张首次推送');
+  if (deck.discovery) {
+    const card = deck.discovery;
+    counts.push('1 张新概念卡');
+    el('discovery-title').textContent = card.title;
+    inlineText(el('discovery-front'), card.front);
+    inlineText(el('discovery-back'), card.back);
+    el('discovery-link').href = noteLink(card.path);
+    el('discovery-path').textContent = card.path;
+    el('discovery').hidden = false;
+  }
+  el('summary').textContent = counts.join(' · ');
+  if (!deck.cards.length) return;
+  el('review').hidden = false;
+
   async function followUp(prompt, title) {
     if (typeof window.openai?.sendFollowUpMessage !== 'function') {
       el('fallback').hidden = false;
@@ -184,8 +217,6 @@ __MATH_RENDERER__
 
   function draw() {
     const c = current();
-    el('heading').textContent = deck.date + (deck.preview ? ' · 修订后的解释' : ' · 知识卡片');
-    el('summary').textContent = deck.preview ? deck.cards.length + ' 张修订卡片' : deck.review_count + ' 张复习 · ' + deck.new_count + ' 张首次推送';
     el('position').textContent = (deck.omitted_count ? '原第 ' + c.position + ' 张 · ' : '') + (index + 1) + ' / ' + deck.cards.length;
     el('kind').textContent = deck.preview ? '修订版 · v' + c.version : (c.presentation === 'new' ? '首次推送' : '再次复习');
     el('topic').textContent = c.topic;
@@ -193,7 +224,9 @@ __MATH_RENDERER__
     el('question').textContent = c.front;
     el('snapshot-warning').textContent = c.snapshot_warning || '';
     el('snapshot-warning').hidden = !c.snapshot_warning;
-    inlineText(el('back'), c.back); inlineText(el('detail-body'), c.details);
+    inlineText(el('back'), c.back);
+    el('details').hidden = !c.details;
+    inlineText(el('detail-body'), c.details);
     el('answer').hidden = !flipped; el('feedback').hidden = !flipped || Boolean(deck.preview);
     el('submit-row').hidden = Boolean(deck.preview);
     el('submit').textContent = typeof window.openai?.sendFollowUpMessage === 'function' ? '提交到聊天保存' : '导出反馈文件';
@@ -210,7 +243,7 @@ __MATH_RENDERER__
       row.append(text); el('source-list').append(row);
       const link = document.createElement('a');
       link.textContent = '在 Obsidian 打开笔记';
-      link.href = 'obsidian://open?vault=' + encodeURIComponent(deck.vault_name || '') + '&file=' + encodeURIComponent(source.path);
+      link.href = noteLink(source.path);
       row.append(link);
       if (source.excerpt) {
         const excerpt = document.createElement('div'); excerpt.className = 'fc-excerpt fc-space';
@@ -240,7 +273,7 @@ __MATH_RENDERER__
   });
   el('prev').addEventListener('click', () => move(-1));
   el('next').addEventListener('click', () => move(1));
-  root.addEventListener('keydown', e => {
+  el('review').addEventListener('keydown', e => {
     if (e.target.closest('input,textarea,select') || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
     if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }

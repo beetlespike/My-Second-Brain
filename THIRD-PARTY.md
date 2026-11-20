@@ -18,4 +18,8 @@ KaTeX 0.19.1，MIT 许可。原许可证保存在 [.flashcards/vendor/KaTeX-LICE
 
 ## 示例材料
 
-assets/demo 中的短文、字幕、教学报告和虚构对话均为本项目重新编写的合成教学内容。它们没有真实实验参与者、真实对话用户或论文发表记录。研究方法页中的数字是教学算例，数学关系与编码例子可以独立复算。公开文献和工具实现按对应页面的链接标注，项目没有附带这些来源的全文或源码。
+原有检索、抽样练习中的短文、字幕、教学报告和虚构对话是本项目编写的合成材料。它们没有真实实验参与者、真实对话用户或论文发表记录。研究方法页中的数字是教学算例，数学关系与编码例子可以独立复算。公开文献和工具实现按对应页面的链接标注，项目没有附带这些来源的全文或源码。
+
+推理服务、分词和强化学习三张地图链接公开作品，仅收录自行撰写的解释和练习。推理服务示例沿用私人库中的公开视频、文章和概念关系，流式计时对话为匿名重写，使用新编数字。三个主题中的金色节点是为示例提出的待学概念。原视频、文章和论文的权利归各自作者或权利人。
+
+The three research maps link to the original works. Their explanations and exercises were written for this vault. The serving dialogue is an anonymized reconstruction with new numbers. The MIT license covers the project’s own material. Linked works retain their original rights.

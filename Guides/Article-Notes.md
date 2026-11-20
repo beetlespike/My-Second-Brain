@@ -1,6 +1,6 @@
 # 从文章到知识
 
-先明确读者想理解的问题，再读取用户选定的原文。文章标题、发布时间、作者和原链接放在属性或来源说明中。文章保存到 Articles，使用 `type: article`、`status`、`evidence_status`，以及 `source_url` 或仓库相对的 `source_path`。
+从用户读过的段落和想留下的理解出发，再对照原文核对。文章标题、发布时间、作者和原链接放在属性或来源说明中。文章保存到 Articles，使用 `type: article`、`status`、`evidence_status`，以及 `source_url` 或仓库相对的 `source_path`。
 
 正文保留关键主张、支持它的原文段落或图片、机制解释和必要条件。作者观点、原文证据、综合理解分别表达。重要图表要实际检查；没有读到的图片或正文不能作为依据。
 

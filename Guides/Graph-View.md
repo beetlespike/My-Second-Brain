@@ -1,24 +1,16 @@
-# 在 Obsidian 看知识网络
+# 在 Obsidian 看知识网络 · Obsidian graph view
 
-[English](#view-the-network-in-obsidian)
+用 Obsidian 打开完整示例库，在左侧选择「查看关系图谱」。灰蓝色是已经整理的概念，淡金色是 AI 建议学习的概念。点击节点可以读它与相邻节点为什么相连。示例使用英文文件名，中文概念名保留在笔记或别名里，两种语言看到的是同一张图。
 
-用 Obsidian 打开完整的示例目录，选择左侧的「查看关系图谱」。点圆点读笔记，鼠标停在圆点上看连线。
+Open the full example folder as an Obsidian vault and select **Open graph view**. Blue-gray marks existing concepts. Pale gold marks proposed study nodes. Select one to read the explanation behind its links.
 
-想用 README 里的黑底和两种节点颜色，可以在示例库里用配套设置。
+| 在图谱面板的「筛选」中输入 · Graph filter | 视图 · View |
+| --- | --- |
+| `path:Concepts OR (path:待学概念 tag:#ai-suggested)` | 完整概念网络 · Full network |
+| `tag:#case-serving` | 推理服务 · LLM serving |
+| `tag:#case-tokenizers` | 多语言分词 · Multilingual tokenizers |
+| `tag:#case-rlvr` | 强化学习与解题覆盖 · RLVR and coverage |
 
-1. 关闭示例库窗口。把 `assets/demo/obsidian-graph.json` 复制到 `.obsidian/graph.json`。目录可以手动建，已有设置先备份。
-2. 把 `assets/demo/obsidian-graph.css` 复制到 `.obsidian/snippets/`。重新打开库，在「外观」选深色并启用该 CSS 片段。
+**沿用 README 的配色**　关闭示例库窗口，把 `assets/demo/obsidian-graph.json` 复制为 `.obsidian/graph.json`，将 `assets/demo/obsidian-graph.css` 放入 `.obsidian/snippets/`。已有配置可先备份。重新打开库，选深色外观并启用此样式片段。在全图筛选条件后加上 ` OR path:MOCs`，就能同时看主题地图。
 
-灰蓝色是已有的概念。淡金色是「待学概念」中带 `ai-suggested` 标签的笔记。可以从「延迟预算下比较 RAG」点进去，看看检索召回、答案质量和首段输出延迟如何影响选型。
-
-[Obsidian 关系图谱说明](https://obsidian.md/help/plugins/graph)
-
-## View the network in Obsidian
-
-Open the full example folder as a vault and select **Open graph view**. Click a node to read the note, or hover to see its links.
-
-To use the README's dark background and two node colors in the example vault, close its window and copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json`. Create the folder if needed and back up any existing graph settings. Copy `assets/demo/obsidian-graph.css` into `.obsidian/snippets/`. Reopen the vault, choose dark mode in Appearance, and enable the snippet.
-
-Blue-gray nodes are existing concepts. Pale gold marks study notes tagged `ai-suggested` in the `待学概念/` folder. Open **Comparing RAG under a latency budget** (延迟预算下比较RAG) to see how retrieval recall, answer quality, and wait time affect the choice of setup.
-
-[Obsidian Graph view help](https://obsidian.md/help/plugins/graph)
+**Use the README colors**　Close the example vault. Copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` and the companion CSS file to `.obsidian/snippets/`. Back up existing settings if needed. Reopen the vault, select dark appearance and enable the snippet. To include the topic maps, append ` OR path:MOCs` to the full-network filter. [Obsidian Graph view help](https://obsidian.md/help/plugins/graph)

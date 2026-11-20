@@ -1,6 +1,6 @@
 # 从视频到知识
 
-先核对实际可读的材料：字幕、音频转写、画面和附带讲义分别记录。视频笔记保存到 Videos，使用 `type: video`、`source_url` 或 `source_path`、`status` 和 `evidence_status`。
+先从用户学过的视频片段定位原讲解，核对字幕、音频转写、画面和附带讲义能支持哪些内容。视频笔记保存到 Videos，使用 `type: video`、`source_url` 或 `source_path`、`status` 和 `evidence_status`。
 
 以时间戳定位重要解释，正文按理解顺序组织。字幕可以支持讲者说过什么；图表、屏幕代码和手写公式需要画面或对应讲义核验。讲义补充与视频讲解保持可辨。
 

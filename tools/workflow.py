@@ -14,7 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTE_DIRS = ('Papers', 'Articles', 'Videos', 'Chats', 'Concepts', 'MOCs', '待学概念', 'Flashcards')
 TYPES = dict(Papers='paper', Articles='article', Videos='video', Chats='chat', Concepts='concept', MOCs='moc', Flashcards='flashcard_set')
 SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards')
-DEMO_SOURCES = ('assets/demo/教学字幕.vtt', 'assets/demo/文章原文.md')
+DEMO_SOURCES = ('assets/demo/serving-sources.md', 'assets/demo/streaming-dialogue.md',
+                'assets/demo/first-token.vtt', 'assets/demo/retrieval.md')
 
 
 def files_under(path):
@@ -65,25 +66,26 @@ def initialize(source, destination, empty=False, *, demo=False):
                 (destination / name).mkdir(exist_ok=True)
             (destination / 'MOCs/知识库入口.md').write_text(
                 '---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n'
-                '把最近想弄懂的问题和相关笔记留在这里。主题多起来后，可以再加阅读路径。\n',
+                '想清楚一个问题需要哪些概念？围绕它写一张主题地图，链接到各个节点，再把地图放到这里。同一个概念可以属于几个主题。\n\n'
+                'Start with a question several concepts can help answer. Link the concepts in a topic map, then add the map here.\n',
                 encoding='utf-8')
-            demo_zh = ('从 [教学字幕](assets/demo/教学字幕.vtt) 和 [短文](assets/demo/文章原文.md) 开始。'
-                       '这两份是合成材料，可以按 [第一次使用](Guides/第一次使用.md) 试一遍。\n\n') if demo else ''
-            demo_en = ('Start with the synthetic [transcript](assets/demo/教学字幕.vtt) and [article](assets/demo/文章原文.md). '
-                       'Follow the [first-use guide](Guides/First-Run.md) to work through them.\n\n') if demo else ''
+            demo_zh = ('[推理服务的四份材料](assets/demo/serving-sources.md)收录真实视频、文章和论文的入口，以及一段公开改写的对话。'
+                       '可从[第一次使用](Guides/第一次使用.md)开始。\n\n') if demo else ''
+            demo_en = ('[Four sources on LLM serving](assets/demo/serving-sources.md) pairs a video, an article and a paper with a rewritten conversation. '
+                       'Follow the [first-use guide](Guides/First-Run.md) to build your network.\n\n') if demo else ''
             (destination / 'README.md').write_text(
                 '# My Second Brain\n\n简体中文 | [English](README.en.md) · [MIT](LICENSE)\n\n'
                 f'{demo_zh}'
-                '用 Obsidian 和 Codex 打开这个目录。给 Codex 一份材料和一个想弄懂的问题，参考 [整理材料](Prompts/整理材料.md) 把概念写入笔记。整理后从 [知识库入口](MOCs/知识库入口.md) 看这些概念怎样相连。\n\n'
-                '再拿一份材料补充已有概念，或从已有笔记里找一个值得继续学的问题。带学、制卡和复习的做法见 [第一次使用](Guides/第一次使用.md)。\n\n'
+                '一份材料往往能让你弄懂几个不同的概念。把每个概念写成能单独读懂的一页，再说清它与别处学过的概念有什么关系。几个节点能一起回答一个问题时，就从[知识库入口](MOCs/知识库入口.md)连进一张主题地图（MOC）。\n\n'
+                '用 Obsidian 阅读，让 Codex 按[整理提示](Prompts/整理材料.md)帮你把学过的概念连起来。还可以请它找出尚未收录、能连接多个已有节点的概念，先标为待学。[开始使用](Guides/第一次使用.md) · [每日知识卡](Guides/自动整理与维护.md)\n\n'
                 '[读取工具](Guides/来源与工具.md) · [本地命令](Guides/工具与扩展.md) · [定期整理](Guides/自动整理与维护.md)\n\n'
                 '模板采用 [MIT 许可证](LICENSE)。第三方组件和导入的材料适用各自的许可。\n',
                 encoding='utf-8')
             (destination / 'README.en.md').write_text(
                 '# My Second Brain\n\n[简体中文](README.md) | English · [MIT](LICENSE)\n\n'
                 f'{demo_en}'
-                'Open this folder in Obsidian and Codex. Give Codex a source and a question, then use the [intake prompt](Prompts/整理材料.md) to write concept notes. Browse the resulting notes from the [knowledge index](MOCs/知识库入口.md).\n\n'
-                'Bring in another source to add to those concepts, or look for a follow-up question in your existing notes. The [first-use guide](Guides/First-Run.md) walks through studying that question and turning it into a review card.\n\n'
+                'A source can teach you several distinct concepts. Give each one a note of its own and explain its connections to things you learned elsewhere. When a group of concepts answers a larger question, make a map of content (MOC) and link it from the [knowledge index](MOCs/知识库入口.md).\n\n'
+                'Read in Obsidian and use the [intake prompt](Prompts/整理材料.md) to have Codex connect what you learned. You can also ask it to identify a missing concept with several links to existing nodes and mark it for study. [Getting started](Guides/First-Run.md) · [Daily knowledge cards](Guides/Automation.md)\n\n'
                 '[Reading tools](Guides/Sources-and-tools.md) · [Commands and settings](Guides/工具与扩展.md) · [Scheduled review](Guides/Automation.md)\n\n'
                 'The template uses the [MIT License](LICENSE). Third-party components and materials you import retain their own licenses.\n',
                 encoding='utf-8')
