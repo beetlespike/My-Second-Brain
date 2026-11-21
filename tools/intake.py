@@ -26,7 +26,7 @@ from source_text import (
     supplied_parse,
 )
 from video_source import available_model, transcribe, video
-from x_source import canonical_url, is_x_url, parse_x_html
+from x_source import canonical_url, declared_x_url, is_x_url, parse_x_html, status_id
 
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +38,7 @@ ARXIV_ID = re.compile(
     r"^/(?:abs|pdf|html)/((?:\d{4}\.\d{4,5}|[a-z][a-z0-9.-]*/\d{7})(?:v\d+)?)(?:\.pdf)?/?$", re.I
 )
 NETWORK_ERRORS = (OSError, ValueError, subprocess.SubprocessError)
+X_READER_VERSION = 2
 
 
 def source_locator(value):
@@ -76,7 +77,21 @@ def web_url(value):
 class WebRedirects(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         web_url(newurl)
+        if is_x_url(req.full_url) and status_id(req.full_url):
+            check_x_location(req.full_url, newurl)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def proxy_denied_request(text, url):
+    match = re.fullmatch(r"Request to GET (\S+) on (\S+) not allowed by policy[.!]?", text.strip(), re.I)
+    if not match:
+        return False
+    address = urlsplit(url)
+    target = address.path or "/"
+    if address.query:
+        target += "?" + address.query
+    return (match[1] in (target, address._replace(fragment="").geturl())
+            and match[2].lower() == (address.hostname or "").lower())
 
 
 def fetch(url):
@@ -85,32 +100,26 @@ def fetch(url):
     try:
         response = build_opener(WebRedirects()).open(req, timeout=20)
     except HTTPError as exc:
-        if exc.code in (403, 407):
-            body = b""
+        if exc.code == 407:
+            exc.close()
+            raise NetworkUnavailable("当前网络代理要求身份验证（HTTP 407）。请使用宿主授权的网络连接读取同一来源。") from exc
+        content_type = exc.headers.get("Content-Type", "") if exc.headers else ""
+        if exc.code == 403 and content_type.partition(";")[0].strip().lower() in ("", "text/plain"):
             try:
-                body = exc.read(1024) or b""
+                text = (exc.read(1024) or b"").decode("utf-8", "replace").strip()
             except OSError:
-                pass
-            text = body.decode("utf-8", "replace")
-            ctype = (exc.headers.get_content_type() or "").lower() if exc.headers else ""
-            if (
-                (not ctype or ctype.startswith("text/plain") or len(body) < 512)
-                and re.search(
-                    r"not allowed by policy|blocked by .*policy|tunnel connection failed",
-                    text,
-                    re.I,
-                )
-            ):
-                raise NetworkUnavailable(
-                    "当前终端的网络代理或策略不允许访问原站。请通过宿主的联网审批重试同一读取命令。"
-                ) from exc
+                text = ""
+            if proxy_denied_request(text, exc.geturl()):
+                exc.close()
+                raise NetworkUnavailable("当前终端的网络代理限制了这次读取。请通过宿主的联网审批重试同一来源。") from exc
         raise
     except URLError as exc:
-        if isinstance(exc.reason, (socket.gaierror, PermissionError)) or re.search(
-            r"tunnel connection failed:\s*(?:403|407)|not allowed by policy|operation not permitted",
-            str(exc.reason),
-            re.I,
-        ):
+        message = str(exc.reason)
+        tunnel = re.fullmatch(r"Tunnel connection failed:\s*(403|407)\b[^\n]*", message, re.I)
+        if tunnel:
+            raise NetworkUnavailable(f"当前代理拒绝了网络连接（HTTP {tunnel[1]}）。请使用宿主授权的网络连接读取同一来源。") from exc
+        system_denial = re.fullmatch(r"(?:\[Errno (?:1|13)\]\s*)?(?:Operation not permitted|Permission denied)", message, re.I)
+        if isinstance(exc.reason, (socket.gaierror, PermissionError)) or system_denial or proxy_denied_request(message, url):
             raise NetworkUnavailable(
                 "当前终端的网络或 DNS 无法访问原站。请通过宿主的联网审批重试同一读取命令。"
             ) from exc
@@ -155,24 +164,75 @@ def platform(url):
     return "web"
 
 
-def read_file(data, suffix, source_type):
+def x_source_url(url):
+    u = web_url(url)
+    if not is_x_url(url) or not status_id(url) or u.port not in (None, 80 if u.scheme == "http" else 443):
+        raise ReadError("请提供具体的 X 帖子或长文章的公开链接。")
+    return canonical_url(url)
+
+
+def check_x_location(source, location):
+    if not is_x_url(location) or not status_id(location):
+        raise ReadError("X 返回了其他页面，无法核对所选帖子的正文。")
+    src, dst = x_source_url(source), x_source_url(location)
+    src_type, src_id = urlsplit(src).path.split("/")[-2:]
+    dst_type, dst_id = urlsplit(dst).path.split("/")[-2:]
+    if src_type == dst_type and src_id != dst_id:
+        raise ReadError("返回页面的 X 编号与所选链接不符。")
+    return dst
+
+
+def x_response(data, encoding, source, final):
+    address = check_x_location(source, final)
+    mat = parse_x_html(decode(data, encoding), source)
+    route, identifier = urlsplit(address).path.split("/")[-2:]
+    if mat.details.get(route + "_id") != identifier:
+        raise ReadError("无法从正文核对 X 返回地址对应的帖子或文章编号。")
+    mat.details["source_url"] = address
+    return mat
+
+
+class SavedHTML(Page):
+    """Keep the publisher's canonical URL separate from embedded posts."""
+
+    def __init__(self, html):
+        self.canonical = ""
+        self.x_markup = False
+        super().__init__(html)
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "link" and any(name == "head" for name, _ in self.stack):
+            link = dict(attrs)
+            if "canonical" in (link.get("rel") or "").lower().split() and not self.canonical:
+                self.canonical = link.get("href") or ""
+        if any(key == "data-testid" and value in ("twitterArticleReadView", "longformRichTextComponent", "tweetText") for key, value in attrs):
+            self.x_markup = True
+        super().handle_starttag(tag, attrs)
+
+    def is_x_page(self):
+        address = self.canonical or self.meta.get("og:url")
+        if address:
+            return is_x_url(address)
+        site = self.meta.get("og:site_name", "").strip().lower()
+        return site in ("x", "twitter", "x (formerly twitter)") if site else self.x_markup
+
+
+def read_file(data, suffix, source_type, source_url=None):
     if data.startswith(b"%PDF-") or suffix == ".pdf":
         return pdf_material(data)
     if suffix in CAPTION_EXTS or suffix == ".json" or data.lstrip(b"\xef\xbb\xbf").startswith(b"WEBVTT"):
         return caption_material(data, suffix)
     if suffix in (".html", ".htm") or data.lstrip()[:30].lower().startswith((b"<!doctype html", b"<html")):
         html = decode(data)
-        page = Page(html)
+        page = SavedHTML(html)
+        if source_type == "x" or (source_type in ("web", "file") and page.is_x_page()):
+            declared = declared_x_url(html)
+            mat = parse_x_html(html, source_url if source_type == "x" and source_url else declared)
+            if declared:
+                mat.details["source_url"] = x_source_url(declared)
+            return mat
         if source_type in ("bilibili", "youtube") or page.meta.get("og:type", "").startswith("video"):
             raise ReadError("视频观看页本身不能作为字幕，请选择字幕文件或浏览器里读到的逐字稿。")
-        if source_type == "x" or (
-            source_type in ("web", "file")
-            and (
-                "X (formerly Twitter)" in page.meta.get("og:site_name", "")
-                or is_x_url(page.meta.get("og:url", ""))
-            )
-        ):
-            return parse_x_html(html)
         if source_type == "paper":
             if page.section_prose:
                 return paper_body(page)
@@ -190,7 +250,7 @@ def read_file(data, suffix, source_type):
     return Material(text, "supplied_text", details={"scope": "supplied file only"})
 
 
-def file_material(path, source_type, model):
+def file_material(path, source_type, model, source_url=None):
     path = supplied_parse(path.expanduser())
     if not path.is_file():
         raise ReadError("找不到指定的材料文件。")
@@ -199,7 +259,7 @@ def file_material(path, source_type, model):
         return transcribe(path, model)
     if path.stat().st_size > LIMIT:
         raise ReadError("原文件超过 48 MiB，可提供本地解析后的文本。")
-    return read_file(path.read_bytes(), suffix, source_type)
+    return read_file(path.read_bytes(), suffix, source_type, source_url)
 
 
 def paper_body(page):
@@ -251,14 +311,15 @@ def online(url, kind, work, model, language):
         if match:
             return arxiv(match[1], prefer_pdf=u.path.startswith("/pdf/"))
     data, final, mime, encoding = fetch(url)
+    if kind == "x" or is_x_url(final):
+        selected = url if kind == "x" else x_source_url(final)
+        return x_response(data, encoding, selected, final)
     if data.startswith(b"%PDF-") or mime == "application/pdf":
         return pdf_material(data)
     suffix = Path(urlsplit(final).path).suffix.lower()
     if suffix in CAPTION_EXTS or mime in ("text/vtt", "text/plain", "text/markdown"):
         return read_file(data, suffix if suffix in CAPTION_EXTS else ".txt", kind)
     html = decode(data, encoding)
-    if kind == "x" or is_x_url(final):
-        return parse_x_html(html, final)
     page = Page(html)
     if kind == "paper" or page.meta.get("citation_pdf_url") or page.meta.get("citation_title"):
         if page.section_prose:
@@ -327,8 +388,12 @@ def publisher_track(source, data, final, encoding, language):
 
 def supplement(locator, source, kind, model, language):
     if not locator.startswith(("http://", "https://")):
-        return file_material(Path(locator), kind, model)
+        return file_material(Path(locator), kind, model, source)
+    if kind == "x" and is_x_url(locator):
+        check_x_location(source, locator)
     data, final, mime, encoding = fetch(locator)
+    if kind == "x" and (is_x_url(locator) or is_x_url(final)):
+        return x_response(data, encoding, source, final)
     suffix = Path(urlsplit(final).path).suffix.lower()
     if kind in ("bilibili", "youtube") and (suffix in (".html", ".htm") or mime == "text/html"):
         return publisher_track(source, data, final, encoding, language)
@@ -336,7 +401,9 @@ def supplement(locator, source, kind, model, language):
         suffix = ".vtt"
     if mime == "text/plain" and suffix not in CAPTION_EXTS:
         suffix = ".txt"
-    return read_file(data, suffix, kind)
+    if mime in ("text/html", "application/xhtml+xml"):
+        suffix = ".html"
+    return read_file(data, suffix, kind, source)
 
 
 def reason(exc):
@@ -363,9 +430,14 @@ def atomic(path, data):
             temp_path.unlink(missing_ok=True)
 
 
-def cached(folder, source):
+def cached(folder, source, kind):
     try:
         record = json.loads((folder / "evidence.json").read_text(encoding="utf-8"))
+        if not isinstance(record, dict):
+            return None
+        if kind == "x" or record.get("source_type") == "x":
+            if record.get("x_reader_version") != X_READER_VERSION:
+                return None
         file = folder / record["file"]
         if (
             record.get("source") == source
@@ -381,7 +453,7 @@ def cached(folder, source):
     return None
 
 
-def configured_file(root, source):
+def configured_file(root, source, canonical=None):
     index = root / ".local/source-files.json"
     if not index.is_file():
         return None
@@ -389,6 +461,20 @@ def configured_file(root, source):
     if not isinstance(paths, dict):
         raise ReadError(".local/source-files.json 应按原链接指定本地文件。")
     value = paths.get(source)
+    if value is None and canonical:
+        value = paths.get(canonical)
+        if value is None:
+            for other, candidate in paths.items():
+                if not is_x_url(other):
+                    continue
+                try:
+                    match = x_source_url(other) == canonical
+                except ValueError:
+                    continue
+                if match:
+                    if value is not None and value != candidate:
+                        raise ReadError("同一 X 帖子的多个分享链接配置了不同文件。请按当前链接指定材料。")
+                    value = candidate
     if value is None:
         return None
     if not isinstance(value, str) or not value.strip():
@@ -406,7 +492,7 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
         raise ReadError("请选择 HTTP(S) 链接或本地文件。")
     path = None if is_web else Path(raw_source).expanduser().resolve()
     kind = platform(raw_source) if is_web else "file"
-    source = canonical_url(raw_source) if (is_web and kind == "x") else raw_source
+    source = x_source_url(raw_source) if kind == "x" else raw_source
     source_label = source if is_web else path.name
     uses_video_reader = kind in ("bilibili", "youtube") and not supplied
     if auto_asr and model is None and (uses_video_reader or Path(supplied or source).suffix.lower() in AUDIO_EXTS):
@@ -423,16 +509,14 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
     provided = supplied
     if is_web and not supplied:
         try:
-            mapped = configured_file(root, raw_source)
-            if mapped is None and source != raw_source:
-                mapped = configured_file(root, source)
+            mapped = configured_file(root, raw_source, source if kind == "x" else None)
             if mapped is not None:
-                mat = file_material(mapped, kind, model)
+                mat = file_material(mapped, kind, model, source)
                 provided = str(mapped)
                 mat.details["origin"] = "configured local file"
         except NETWORK_ERRORS as exc:
             local_issue = reason(exc)
-        prior = cached(folder, source_label)
+        prior = cached(folder, source_label, kind)
         if (
             mat is None
             and not refresh
@@ -488,6 +572,8 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
         "sha256": digest,
         "next": "Prompts/整理材料.md",
     }
+    if kind == "x":
+        record["x_reader_version"] = X_READER_VERSION
     if provided:
         if provided.startswith(("https://", "http://")):
             u = urlsplit(provided)

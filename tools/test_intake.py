@@ -2,6 +2,7 @@
 
 import codecs
 from email.message import Message
+import hashlib
 from io import BytesIO
 import json
 import os
@@ -10,7 +11,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.request import Request
 from unittest.mock import patch
 
 import intake
@@ -21,6 +23,11 @@ WECHAT = "https://mp.weixin.qq.com/s/fixture"
 PAPER = "https://arxiv.org/abs/2309.06180v1"
 VIDEO = "https://www.youtube.com/watch?v=abcdefghijk"
 SRT = b"1\n00:00:01,000 --> 00:00:03,500\nA worked example.\n"
+
+
+def saved_x_article(url, body="A saved article paragraph."):
+    return ('<html><head><link rel="canonical" href="' + url + '"></head><body>'
+            '<div data-testid="twitterArticleReadView"><p>' + body + '</p></div></body></html>')
 
 
 class SourceIntakeTests(unittest.TestCase):
@@ -341,6 +348,7 @@ class SourceIntakeTests(unittest.TestCase):
             "<html><head>"
             '<meta property="og:site_name" content="X (formerly Twitter)">'
             '<meta property="og:description" content="Saved DOM">'
+            '<meta property="og:url" content="https://x.com/handle/status/888">'
             "</head><body>"
             '<nav>X navigation noise</nav>'
             '<div data-testid="twitterArticleReadView">'
@@ -481,3 +489,136 @@ class SourceIntakeTests(unittest.TestCase):
         finally:
             policy_err.close()
             remote_err.close()
+
+    def test_x_skips_legacy_comment_cache_and_reuses_revalidated_material(self):
+        url = "https://x.com/reader/status/111"
+        folder = self.root / ".local/imports" / hashlib.sha256(url.encode()).hexdigest()[:24]
+        folder.mkdir(parents=True)
+        old = folder / "text-comments.md"
+        old.write_text("Only a comment.\n", encoding="utf-8")
+        record = {"status": "ready", "file": old.name, "source": url, "material": old.relative_to(self.root).as_posix(),
+                  "sha256": hashlib.sha256(old.read_bytes()).hexdigest()}
+        manifest = folder / "evidence.json"
+        for kind, evidence in [("web", "article_html"), ("x", "x_article")]:
+            record.update(source_type=kind, evidence=evidence)
+            manifest.write_text(json.dumps(record), encoding="utf-8")
+            with patch.object(intake, "fetch", return_value=(b"<html><article>Just a reply.</article></html>", url, "text/html", "utf-8")) as get:
+                with self.assertRaises(ReadError):
+                    intake.intake(self.root, url + "?s=20")
+                get.assert_called_once_with(url)
+            self.assertEqual(json.loads(manifest.read_text(encoding="utf-8")), record)
+        html = saved_x_article(url).encode()
+        with patch.object(intake, "fetch", return_value=(html, url, "text/html", "utf-8")):
+            result = intake.intake(self.root, url)
+        with patch.object(intake, "fetch", side_effect=AssertionError("canonical cache should be used")):
+            again = intake.intake(self.root, url.replace("x.com", "twitter.com") + "?s=46")
+        self.assertTrue(again["cached"])
+        self.assertEqual(again["sha256"], result["sha256"])
+        self.assertTrue(old.is_file())
+
+    def test_x_local_html_and_mapped_share_links_keep_the_selected_post(self):
+        url = "https://x.com/reader/status/111"
+        other = "https://x.com/writer/status/222"
+        local = self.root / ".local"
+        local.mkdir()
+        saved = local / "reading.html"
+        saved.write_text(saved_x_article(url), encoding="utf-8")
+        archive = intake.intake(self.root, str(saved))
+        self.assertEqual((archive["source_type"], archive["source"], archive["details"]["status_id"]), ("x", saved.name, "111"))
+        self.assertEqual(archive["details"]["source_url"], url)
+        (local / "source-files.json").write_text(json.dumps({url.replace("x.com", "twitter.com") + "?s=20": saved.name}))
+        with patch.object(intake, "fetch", side_effect=AssertionError("mapped file should be used")):
+            mapped = intake.intake(self.root, url + "?s=46")
+        self.assertEqual((mapped["source"], mapped["evidence_source"], mapped["details"]["origin"]),
+                         (url, saved.name, "configured local file"))
+        saved.write_text(saved_x_article(other, "A different writer."), encoding="utf-8")
+        with self.assertRaises(ReadError):
+            intake.intake(self.root, url, str(saved))
+        with patch.object(intake, "fetch", side_effect=AssertionError("cached verified article is available")):
+            again = intake.intake(self.root, url)
+        self.assertEqual(again["sha256"], mapped["sha256"])
+        self.assertIn("local_file_issue", again)
+
+    def test_x_checks_response_identity_and_rejects_status_pages_without_post_html(self):
+        url = "https://x.com/sample/status/111"
+        other = "https://x.com/other/status/222"
+        for final, mime, body in [(other, "text/html", saved_x_article(other).encode()),
+                                  ("https://x.com/i/flow/login", "text/html", saved_x_article(url).encode()),
+                                  (url, "text/plain", b"Only the reply summary."),
+                                  (url, "application/pdf", b"%PDF-not-a-post")]:
+            with self.subTest(final=final, mime=mime):
+                with patch.object(intake, "fetch", return_value=(body, final, mime, "utf-8")) as get:
+                    with self.assertRaises(ReadError):
+                        intake.intake(self.root, url)
+                    get.assert_called_once_with(url)
+        alias = "https://example.org/reading"
+        with patch.object(intake, "fetch", return_value=(b"<html><article>Only replies</article></html>", url, "text/html", "utf-8")):
+            with self.assertRaises(ReadError):
+                intake.intake(self.root, alias)
+        with patch.object(intake, "fetch", return_value=(saved_x_article(url).encode(), url, "text/html", "utf-8")):
+            converted = intake.intake(self.root, alias)
+        self.assertEqual((converted["source_type"], converted["source"], converted["details"]["source_url"]), ("x", alias, url))
+        with patch.object(intake, "fetch", side_effect=AssertionError("unrelated source must not be fetched")):
+            for target in ["https://x.com/reader", "https://twitter.com:10443/demo/status/111"]:
+                with self.assertRaises(ReadError):
+                    intake.intake(self.root, target)
+            with self.assertRaises(ReadError):
+                intake.intake(self.root, url, supplied=other)
+        redirects = intake.WebRedirects()
+        with self.assertRaises(ReadError):
+            redirects.redirect_request(Request(url), None, 302, "Found", {}, other)
+        same_post = url.replace("x.com", "twitter.com") + "?s=20"
+        self.assertEqual(redirects.redirect_request(Request(url), None, 302, "Found", {}, same_post).full_url, same_post)
+
+    def test_x_explicit_text_keeps_its_provenance_and_refresh_propagates_denial(self):
+        url = "https://x.com/sample/status/111"
+        text = self.root / "selected.txt"
+        text.write_text("Text saved by the reader.", encoding="utf-8")
+        with patch.object(intake, "fetch", side_effect=AssertionError("local file must be used")):
+            result = intake.intake(self.root, url, str(text))
+        self.assertEqual((result["evidence_source"], result["evidence"], result["details"]["scope"]),
+                         (text.name, "supplied_text", "supplied file only"))
+        error = HTTPError(url, 403, "Forbidden", Message(), BytesIO(b"Forbidden"))
+        with error, patch.object(intake, "build_opener") as opener:
+            opener.return_value.open.side_effect = error
+            with self.assertRaises(HTTPError):
+                intake.intake(self.root, url, refresh=True)
+            self.assertEqual(opener.return_value.open.call_count, 1)
+
+    def test_saved_publisher_article_with_an_embedded_post_uses_web_reader(self):
+        publisher = self.root / "publisher.html"
+        publisher.write_text(
+            '<html><head><link rel="canonical" href="https://example.org/story"></head><body>'
+            '<article><h1>Local reporting</h1><p>The publisher explains what happened.</p>'
+            '<div data-testid="tweetText">An embedded quote.</div></article></body></html>', encoding="utf-8")
+        with patch.object(intake, "declared_x_url", side_effect=AssertionError("ordinary publisher should use the web reader")):
+            entry = intake.intake(self.root, str(publisher))
+        self.assertNotEqual(entry["source_type"], "x")
+        self.assertIn("The publisher explains what happened.", (self.root / entry["material"]).read_text(encoding="utf-8"))
+
+    def test_proxy_auth_tunnel_and_ambiguous_origin_denials_are_distinguished(self):
+        url = "https://x.com/sample/status/111"
+        cases = [
+            (403, "text/html", b"<h1>Not allowed by policy</h1>", HTTPError),
+            (403, "text/plain", b"Blocked by our content policy", HTTPError),
+            (403, "text/plain", b"Request to GET /thing on other.example not allowed by policy", HTTPError),
+            (403, "text/plain", b"Request to GET /different on x.com not allowed by policy", HTTPError),
+            (407, "text/html", b"<h1>Proxy Authentication Required</h1>", intake.NetworkUnavailable),
+        ]
+        for code, mime, text, expected in cases:
+            headers = Message()
+            headers["Content-Type"] = mime
+            error = HTTPError(url, code, "Denied", headers, BytesIO(text))
+            with self.subTest(code=code, body=text), error, patch.object(intake, "build_opener") as opener:
+                opener.return_value.open.side_effect = error
+                with self.assertRaises(expected):
+                    intake.fetch(url)
+                self.assertEqual(opener.return_value.open.call_count, 1)
+        for message, expected in [("Tunnel connection failed: 403 Forbidden", intake.NetworkUnavailable),
+                                  ("Tunnel connection failed: 407 Proxy Authentication Required", intake.NetworkUnavailable),
+                                  ("origin said not allowed by policy", URLError)]:
+            with self.subTest(message=message), patch.object(intake, "build_opener") as opener:
+                opener.return_value.open.side_effect = URLError(OSError(message))
+                with self.assertRaises(expected):
+                    intake.fetch(url)
+                self.assertEqual(opener.return_value.open.call_count, 1)
