@@ -16,11 +16,18 @@ import tempfile
 import uuid
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parents[1]
+ASSET_DIR = Path(__file__).resolve().parent
+TOOL_ROOT = ASSET_DIR.parent
+BUNDLED_VAULT = TOOL_ROOT / 'examples' / 'demo-vault'
 INTERVALS = {"again": 1, "uncertain": 3, "familiar": 14}
 DAILY_LIMIT = 10
 NEW_LIMIT = 6
 SOURCE_DIRS = {"Concepts", "MOCs", "Chats", "Papers", "Articles", "Videos"}
+STUDY_DIRS = {"Study-Queue", "待学概念"}
+CARD_FIELDS = {
+    "Study Card": {"Front": "front", "Short Answer": "back", "Details": "details", "Sources": "sources"},
+    "知识卡": {"正面": "front", "简答": "back", "展开": "details", "来源": "sources"},
+}
 META = re.compile(r"<!-- card: (.*?) -->", re.S)
 
 
@@ -51,8 +58,9 @@ def settings(root):
     if not isinstance(intervals, dict) or set(intervals) != set(INTERVALS) or any(type(v) is not int or v < 1 for v in intervals.values()):
         raise ValueError('三种反馈的间隔必须是正整数天数')
     dirs = cfg['source_dirs']
-    if not isinstance(dirs, list) or not dirs or any(not isinstance(d, str) or not re.fullmatch(r'[^./\\\\][^/\\\\]*', d) or d in {'待学概念', 'Flashcards'} for d in dirs):
-        raise ValueError('来源目录须为知识正文的顶层目录，待学概念和卡片不作来源')
+    reserved = {name.casefold() for name in STUDY_DIRS | {'Flashcards'}}
+    if not isinstance(dirs, list) or not dirs or any(not isinstance(d, str) or not re.fullmatch(r'[^./\\\\][^/\\\\]*', d) or d.casefold() in reserved for d in dirs):
+        raise ValueError('来源目录须为知识正文的顶层目录。Study-Queue、待学概念和 Flashcards 用于卡片，不能登记为来源')
     try:
         if cfg['timezone'] != 'local':
             ZoneInfo(cfg['timezone'])
@@ -67,22 +75,37 @@ def today(timezone='Asia/Shanghai'):
     return datetime.now(ZoneInfo(timezone)).date().isoformat()
 
 
-def markdown_structure(text):
-    """列出代码块之外的 Markdown 标题。"""
-    lines = text.splitlines()
-    headings, fence = [], None
+def unfenced_lines(lines):
+    fence = None
     for i, line in enumerate(lines):
         marker = re.match(r'^ {0,3}(`{3,}|~{3,})', line)
         if marker:
             run = marker[1]
             if fence is None:
                 fence = run
-            elif run[0] == fence[0] and len(run) >= len(fence):
+            elif run[0] == fence[0] and len(run) >= len(fence) and not line[marker.end():].strip():
                 fence = None
             continue
-        if fence is None and (m := re.match(r'^(#{1,6}) (.+?)\s*$', line)):
+        if fence is None:
+            yield i, line
+
+
+def markdown_structure(text):
+    """列出代码块之外的 Markdown 标题。"""
+    lines = text.splitlines()
+    headings = []
+    for i, line in unfenced_lines(lines):
+        if m := re.match(r'^(#{1,6}) (.+?)\s*$', line):
             headings.append((i, len(m[1]), m[2]))
     return lines, headings
+
+
+def sections_at_level(lines, headings, level):
+    boundaries = [(i, depth, title) for i, depth, title in headings if depth <= level]
+    boundaries.append((len(lines), 0, ''))
+    for (start, depth, title), (end, _, _) in zip(boundaries, boundaries[1:]):
+        if depth == level:
+            yield title, '\n'.join(lines[start + 1:end])
 
 
 def section(text, heading, *, required=True):
@@ -111,23 +134,42 @@ def source_text(root, source):
     return section(p.read_text(encoding="utf-8"), source["heading"])
 
 
-def body_part(body, name, *, required=True):
-    return section(body, name, required=required).partition("\n")[2].strip()
+def card_fields(body, language=None):
+    lines, headings = markdown_structure(body)
+    fields = {}
+    for title, content in sections_at_level(lines, headings, 3):
+        for group, aliases in CARD_FIELDS.items():
+            if title not in aliases:
+                continue
+            if language is not None and language != group:
+                raise ValueError(f'同一张卡片的结构标题混用中英文：{title}')
+            language = group
+            key = aliases[title]
+            if key in fields:
+                raise ValueError(f'卡片小节重复：{title}')
+            fields[key] = content.strip()
+    if not fields.get('front') or not fields.get('back'):
+        raise ValueError('卡片需要非空的 Front 和 Short Answer，或「正面」和「简答」')
+    return fields
 
 
 def read_discovery_card(root, relative):
+    root = root.resolve()
     path = (root / relative).resolve()
-    if path.suffix != '.md' or not path.is_relative_to(root / '待学概念'):
-        raise ValueError('新概念卡须来自当前学习目录的「待学概念」Markdown 笔记')
+    if path.suffix != '.md' or not any(path.is_relative_to(root / folder) for folder in STUDY_DIRS):
+        raise ValueError('新概念卡须来自当前学习目录的 Study-Queue 或「待学概念」Markdown 笔记')
     text = path.read_text(encoding='utf-8')
-    _, headings = markdown_structure(text)
+    lines, headings = markdown_structure(text)
     title = next((title for _, level, title in headings if level == 1), path.stem)
-    card = section(text, '知识卡')
-    front = section(card, '正面').partition('\n')[2].strip()
-    back = section(card, '简答').partition('\n')[2].strip()
-    if not front or not back:
-        raise ValueError(f'{path.name}：知识卡需要题目和简答')
-    return {'path': path.relative_to(root).as_posix(), 'title': title, 'front': front, 'back': back}
+    cards = [(heading, body) for heading, body in sections_at_level(lines, headings, 2) if heading in CARD_FIELDS]
+    if len(cards) != 1:
+        raise ValueError(f'{path.name}：需要唯一的「知识卡」或 Study Card 二级标题，实际 {len(cards)} 处')
+    heading, body = cards[0]
+    fields = card_fields(body, language=heading)
+    card = {'path': path.relative_to(root).as_posix(), 'title': title, 'front': fields['front'], 'back': fields['back']}
+    if heading != '知识卡':
+        card['heading'] = heading
+    return card
 
 
 def catalog(root):
@@ -142,13 +184,16 @@ def catalog(root):
             errors.append(f"{p.name}：缺少 type: flashcard_set")
             continue
         lines, headings = markdown_structure(text)
-        starts = [(i, title) for i, level, title in headings if level == 2]
-        if not starts:
+        sections = list(sections_at_level(lines, headings, 2))
+        if not sections:
             errors.append(f'{p.name}：需要二级标题和 <!-- card: {{...}} --> 卡片元数据')
-        for start, title in starts:
-            end = next((i for i, level, _ in headings if i > start and level <= 2), len(lines))
-            block = '\n'.join(lines[start:end])
-            matches = list(META.finditer(block))
+        for title, block in sections:
+            # Preserve character offsets so the original card body keeps its fenced examples.
+            block_lines = block.splitlines(keepends=True)
+            prose = [' ' * len(line) for line in block_lines]
+            for i, line in unfenced_lines(block_lines):
+                prose[i] = line
+            matches = list(META.finditer(''.join(prose)))
             if len(matches) != 1:
                 errors.append(f'{p.name}：{title} 需要一条 <!-- card: {{...}} --> 卡片元数据，实际 {len(matches)} 条')
                 continue
@@ -167,11 +212,11 @@ def catalog(root):
                 if c["id"] in seen:
                     raise ValueError(f"重复编号 {c['id']}")
                 seen.add(c["id"])
-                body = block[match.end():]
-                c.update(front=body_part(body, "正面"), back=body_part(body, "简答"),
-                         details=body_part(body, "展开", required=False), card_file=str(p.relative_to(root)))
-                if not c["front"] or not c["back"] or not c["sources"]:
-                    raise ValueError("正面、简答和来源均不能为空")
+                fields = card_fields(block[match.end():])
+                c.update(front=fields['front'], back=fields['back'], details=fields.get('details', ''),
+                         card_file=str(p.relative_to(root)))
+                if not c["sources"]:
+                    raise ValueError("来源不能为空")
                 key = re.sub(r"\s+", "", c["front"])
                 if key in questions:
                     raise ValueError(f"重复问题：{c['front']}")
@@ -474,7 +519,7 @@ def study_id(day, card):
 def register_study(db, day, card):
     cid = study_id(day, card)
     context = {'kind': 'study', 'card_file': card['path'], 'front': card['front'], 'back': card['back'],
-               'sources': [{'path': card['path'], 'heading': '知识卡'}]}
+               'sources': [{'path': card['path'], 'heading': card.get('heading', '知识卡')}]}
     db.execute('INSERT OR IGNORE INTO versions VALUES (?, 1, ?, ?)', (cid, cid, dump(context)))
     return cid
 
@@ -498,7 +543,7 @@ def visible_cards(session, current, cfg):
 
 
 def page_html(root, session, *, preview=False, standalone=True, discovery=None, saved_ids=None):
-    assets = Path(__file__).parent if saved_ids is not None else root / ".flashcards"
+    assets = ASSET_DIR
     template = (assets / "viewer.html").read_text(encoding="utf-8")
     display = json.loads(dump(session))
     if preview:
@@ -580,7 +625,11 @@ def main():
     import feedback_inbox as inbox
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=ROOT)
+    default_root = TOOL_ROOT
+    if (BUNDLED_VAULT.resolve() == BUNDLED_VAULT and (BUNDLED_VAULT / '.secondbrain.json').is_file()
+            and not (TOOL_ROOT / 'Flashcards').is_dir()):
+        default_root = BUNDLED_VAULT
+    parser.add_argument("--root", type=Path, default=default_root)
     parser.add_argument("--state-dir", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("audit")
@@ -621,6 +670,13 @@ def main():
     show.add_argument("--date")
     args = parser.parse_args()
     root = args.root.resolve()
+    if root == TOOL_ROOT:
+        root = default_root
+    if root == BUNDLED_VAULT and args.state_dir is None:
+        # Keep an upgraded checkout's existing review history at its original location.
+        old_folder = TOOL_ROOT / '.flashcards/local'
+        if (old_folder / 'review.sqlite3').is_file() and not (root / '.flashcards/local/review.sqlite3').is_file():
+            args.state_dir = old_folder
     if args.command in ('daily', 'resolve'):
         with closing(connect(root, args.state_dir)) as db, db:
             day = today(settings(root)['timezone'])

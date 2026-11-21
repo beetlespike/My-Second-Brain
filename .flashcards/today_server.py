@@ -20,7 +20,7 @@ import review
 
 HOST = '127.0.0.1'
 RECORD = 'today_listener'
-PROTOCOL = 4
+PROTOCOL = 5
 MAX_BODY = 256 * 1024
 
 
@@ -187,6 +187,9 @@ def listener_record(db, root, folder):
 
 
 def scope(root, folder):
+    if root == review.BUNDLED_VAULT and folder == review.TOOL_ROOT / '.flashcards/local':
+        # This database and its bookmark were issued when the sample lived at the checkout root.
+        root = review.TOOL_ROOT
     return review.digest(str(root) + '\0' + str(folder))
 
 

@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import feedback_inbox
 import review
 from test_review import sample_cards
 
@@ -80,17 +81,23 @@ class PublicWorkflowTests(unittest.TestCase):
     def test_new_settings_do_not_hide_a_previous_daily_deck(self):
         deck, _ = review.make_session(self.db, self.cards, '2026-01-01')
         (self.root / '.secondbrain.json').write_text(json.dumps({'new_limit': 0}))
-        (self.root / '.flashcards/viewer.html').write_text('__DECK_DATA__')
         with patch.object(review, 'catalog', return_value=(self.cards, [], [])):
             display = review.render(self.root, deck, self.root / 'old.html')
         self.assertEqual(len(display['cards']), 6)
 
     def test_pending_pages_are_not_card_sources(self):
-        p = self.root / '待学概念' / '例子.md'
-        p.parent.mkdir()
-        p.write_text('# 例子\n\n## 定义\n解释。')
-        with self.assertRaises(ValueError):
-            review.source_text(self.root, {'path': str(p.relative_to(self.root)), 'heading': '定义'})
+        for folder in ('待学概念', 'Study-Queue'):
+            with self.subTest(folder=folder):
+                p = self.root / folder / '例子.md'
+                p.parent.mkdir()
+                p.write_text('# 例子\n\n## 定义\n解释。')
+                with self.assertRaises(ValueError):
+                    review.source_text(self.root, {'path': str(p.relative_to(self.root)), 'heading': '定义'})
+                config = self.root / '.secondbrain.json'
+                config.write_text(json.dumps({'source_dirs': [folder]}))
+                with self.assertRaises(ValueError):
+                    review.settings(self.root)
+                config.unlink()
 
     def test_source_symlink_cannot_leave_the_learning_directory(self):
         folder = self.root / 'Concepts'
@@ -135,6 +142,94 @@ class PublicWorkflowTests(unittest.TestCase):
         cards, errors, _ = review.catalog(self.root)
         self.assertEqual(errors, [])
         self.assertIn('先求和。', cards[0]['details'])
+
+    def test_heading_aliases_preserve_registered_version_and_snapshot(self):
+        note = self.write_card_file()
+        chinese = note.read_text(encoding='utf-8') + '\n### 来源\n[均值](../Concepts/均值.md)\n'
+        note.write_text(chinese, encoding='utf-8')
+        original, errors, _ = review.catalog(self.root)
+        self.assertEqual(errors, [])
+        day = '2026-01-12'
+        snapshot, _ = review.make_session(self.db, original, day)
+        english = chinese.replace('## 均值\n', '## 正面\n')
+        for before, after in zip(('正面', '简答', '展开', '来源'), ('Front', 'Short Answer', 'Details', 'Sources')):
+            english = english.replace('### ' + before, '### ' + after)
+        note.write_text(english, encoding='utf-8')
+        parsed, errors, _ = review.catalog(self.root)
+        self.assertEqual(errors, [])
+        self.assertEqual(parsed, original)
+        self.assertEqual(review.make_session(self.db, parsed, day), (snapshot, True))
+
+        extra = english[english.index('## 正面'):]
+        extra = extra.replace(original[0]['id'], 'sb-fc-9999').replace('怎样计算均值？', '另一个问题？')
+        extra = extra.replace('先求和。', '~~~md\n## 知识卡\n<!-- card: {} -->\n### 简答\n~~~\nUse the sum.')
+        note.write_text(chinese + '\n' + extra, encoding='utf-8')
+        cards, errors, _ = review.catalog(self.root)
+        self.assertEqual(errors, [])
+        self.assertEqual([c['id'] for c in cards], [original[0]['id'], 'sb-fc-9999'])
+        self.assertIn('### 简答', cards[1]['details'])
+
+    def test_mixed_or_duplicate_card_fields_are_rejected(self):
+        note = self.write_card_file()
+        chinese = note.read_text(encoding='utf-8') + '\n### 来源\n出处\n'
+        for name, invalid in (
+            ('front', chinese.replace('### 正面', '### Front')),
+            ('details', chinese.replace('### 展开', '### Details')),
+            ('sources', chinese.replace('### 来源', '### Sources')),
+            ('duplicate answer', chinese + '\n### 简答\n另一段答案'),
+            ('duplicate sources', chinese + '\n### 来源\n第二组来源'),
+        ):
+            with self.subTest(name=name):
+                note.write_text(invalid, encoding='utf-8')
+                cards, errors, _ = review.catalog(self.root)
+                self.assertEqual(cards, [])
+                self.assertEqual(len(errors), 1)
+                self.assertRegex(errors[0], '混用|重复')
+
+    def test_study_heading_selects_one_language_in_either_queue(self):
+        english = '## Study Card\n### Front\nQuestion?\n### Short Answer\n答案。\n'
+        chinese = '## 知识卡\n### 正面\nQuestion?\n### 简答\n答案。\n'
+        for folder in ('Study-Queue', '待学概念'):
+            note = self.root / folder / 'Example.md'
+            note.parent.mkdir()
+            for heading, body in [('Study Card', english), ('知识卡', chinese)]:
+                with self.subTest(folder=folder, heading=heading):
+                    note.write_text('# Title\n\n' + body + '\n## Next section\n### Sources\nOther note prose.')
+                    card = review.read_discovery_card(self.root, note.relative_to(self.root))
+                    self.assertEqual((card['title'], card['front'], card['back']), ('Title', 'Question?', '答案。'))
+                    self.assertEqual(card.get('heading', '知识卡'), heading)
+            for invalid in (english + chinese, english + english,
+                            english + '\n### 来源\n备注', english.replace('## Study Card', '## 知识卡')):
+                with self.subTest(folder=folder, invalid=invalid):
+                    note.write_text(invalid)
+                    with self.assertRaises(ValueError):
+                        review.read_discovery_card(self.root, note.relative_to(self.root))
+
+    def test_english_study_comment_and_revised_note_round_trip(self):
+        path = 'Study-Queue/Example.md'
+        note = self.root / path
+        note.parent.mkdir()
+        body = '# Example\n## Study Card\n### Front\nHow many?\n### Short Answer\nTwo.\n'
+        note.write_text(body)
+        card = review.read_discovery_card(self.root, path)
+        day = '2026-01-12'
+        deck, _ = review.make_session(self.db, [], day, discovery=card, allow_empty=True)
+        self.assertEqual(review.selected_discovery(self.db, day), card)
+        cid = review.study_id(day, card)
+        feedback = {'session_date': day, 'workspace_id': deck['workspace_id'], 'batch_id': 'study-test',
+                    'entries': [{'card_id': cid, 'version': 1, 'note': 'Why?'}]}
+        self.assertEqual(review.save_feedback(self.db, [], feedback, day)['saved'], 1)
+        pending = feedback_inbox.report(self.db, day)['items'][0]
+        self.assertEqual(pending['sources'], [{'path': path, 'heading': 'Study Card'}])
+        result = {'workspace_id': deck['workspace_id'], 'items': [
+            {'id': pending['id'], 'outcome': 'revised', 'reply': 'The answer now explains the count.'}]}
+        with self.assertRaisesRegex(ValueError, '尚未修订'):
+            feedback_inbox.resolve(self.db, self.root, result, day)
+        note.write_text(body.replace('Two.', 'One pair contains two items.'))
+        self.assertEqual(feedback_inbox.resolve(self.db, self.root, result, day)['handled'], 1)
+        self.assertEqual(feedback_inbox.resolve(self.db, self.root, result, day)['duplicates'], 1)
+        self.assertIn('One pair contains two items.', feedback_inbox.history_html(self.db, language='en'))
+        self.assertEqual(review.selected_discovery(self.db, day)['back'], 'Two.')
 
 
 if __name__ == '__main__':

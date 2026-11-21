@@ -145,11 +145,11 @@ class ReviewTests(unittest.TestCase):
         for c in self.cards:
             if c["id"] in retired:
                 c.update(status="retired", eligible=False)
-        (self.root / ".flashcards/viewer.html").write_text("__DECK_DATA__")
         output = self.root / "view.html"
         with patch.object(review, "catalog", return_value=(self.cards, [], [])):
             display = review.render(self.root, first, output, standalone=False)
-        self.assertEqual(display, json.loads(output.read_text(encoding="utf-8")))
+        embedded = output.read_text(encoding="utf-8").split('const deck = ', 1)[1]
+        self.assertEqual(display, json.JSONDecoder().raw_decode(embedded)[0])
         self.assertEqual((len(display["cards"]), display["new_count"], display["omitted_count"]), (10, 6, 15))
         self.assertEqual([c["position"] for c in display["cards"]], [2, 4, 5, 6, 13, 14, 15, 16, 17, 18])
         self.assertEqual(first, original)
@@ -175,7 +175,6 @@ class ReviewTests(unittest.TestCase):
         first = self.session()
         for c in self.cards:
             c.update(status="retired", eligible=False)
-        (self.root / ".flashcards/viewer.html").write_text("__DECK_DATA__")
         output = self.root / "view.html"
         with patch.object(review, "catalog", return_value=(self.cards, [], [])):
             with self.assertRaisesRegex(ValueError, "全部退出复习范围"):
@@ -214,7 +213,6 @@ class ReviewTests(unittest.TestCase):
         first['cards'] = first['cards'][:10]
         first['new_count'] = 2
         original = deepcopy(first)
-        (self.root / '.flashcards/viewer.html').write_text('__DECK_DATA__')
         with patch.object(review, 'catalog', return_value=(self.cards, [], [])):
             display = review.render(self.root, first, self.root / 'view.html')
         self.assertEqual(display['cards'], first['cards'])
@@ -232,7 +230,6 @@ class ReviewTests(unittest.TestCase):
         card.update(version=2, back="新的答案", sources=[
             {"path": str(new_path.relative_to(self.root)), "heading": "缓存"}
         ])
-        (self.root / ".flashcards/viewer.html").write_text("__DECK_DATA__")
         with patch.object(review, "catalog", return_value=(self.cards, [], [])):
             display = review.render(self.root, original, self.root / "view.html")
         first = display["cards"][0]
