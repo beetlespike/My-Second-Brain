@@ -8,6 +8,8 @@ If `intake.py` returns `needs_network`, request single-target read-only network 
 
 Check existing concepts by meaning and aliases before creating new pages. When a synonymous concept already exists, add new explanations, examples, or applicability conditions to that page. Give each newly introduced concept a self-contained note in `Concepts/`. Keep a concise source note under `Papers/`, `Articles/`, `Videos/`, or `Chats/` linking to each extracted concept.
 
+For an X link, `details.thread` means the source page identified an author thread. Summarize the selected post separately. If the user asked for the whole thread, tell them which post was read and which adjacent posts are only links. Read more posts only within the user’s requested scope.
+
 Read each new concept alongside existing concepts in the vault. Where does one step rely on a familiar method? Which earlier conclusion shifts under a new condition? Write that reasoning directly in prose and add a standard relative Markdown link (`[Concept Name](../Concepts/...md)`) right on that phrase—only link where you can state why the connection holds.
 
 Standard relative Markdown links work directly across all editors and let graph views such as Obsidian draw edges between notes. Add backlinks on older pages where readers coming from that direction need the new example. When several concepts together answer one larger question, gather them in the relevant map of content under `MOCs/` (creating a new map only when no existing map covers that question; one concept can belong to multiple maps).

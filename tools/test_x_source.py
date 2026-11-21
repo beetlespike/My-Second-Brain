@@ -1,8 +1,12 @@
 """Offline public-page shapes for the X reader. Each neighboring post has distinct text."""
 
 import json
+from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
+import intake
 from source_text import ReadError
 from x_source import declared_x_url, parse_x_html
 
@@ -37,7 +41,88 @@ def rendered(post_id, text, extra=""):
             f'<a href="/user/status/{post_id}"><time datetime="2026-01-02">2 Jan</time></a></article>')
 
 
+def timeline_post(post_id, author="42", parent=None, *, display="SelfThread"):
+    account = {"rest_id": author, "core": {"screen_name": "writer"}}
+    post = tweet(post_id, "Selected text" if post_id == "11" else "Neighbor text",
+                 core={"user_results": {"result": account}})
+    if parent:
+        post.update(reply_to_results={"rest_id": parent}, reply_to_user_results={"rest_id": "42"})
+    return {"__typename": "TimelineTimelineItem", "content": {
+        "__typename": "TimelineTweet", "display_type": display,
+        "tweet_results": {"rest_id": post_id, "result": post},
+    }}
+
+
+def conversation(focal, *neighbors, response_id="11"):
+    entries = [{"entry_id": "tweet-11", "content": focal},
+               {"content": {"__typename": "TimelineTimelineModule",
+                            "items": [{"item": neighbor} for neighbor in neighbors]}}]
+    standalone = focal["content"]["tweet_results"]["result"].copy()
+    standalone.pop("reply_to_results", None)
+    standalone.pop("reply_to_user_results", None)
+    return page(route("11"), relay({
+        "tweet_result_by_rest_id": {"rest_id": response_id, "result": standalone},
+        "threaded_conversation_with_injections_v2": {"instructions": [
+            {"__typename": "TimelineAddEntries", "entries": entries}
+        ]},
+    }))
+
+
 class XSourceTests(unittest.TestCase):
+    def test_thread_links_require_direct_same_author_timeline_evidence(self):
+        focal = timeline_post("11", parent="10")
+        child = timeline_post("12", parent="11")
+        quoted = timeline_post("99", parent="11")["content"]["tweet_results"]
+        child["content"]["tweet_results"]["result"]["quoted_tweet_results"] = quoted
+        html = conversation(focal, timeline_post("10", display="Tweet"), child, child,
+                            timeline_post("20", author="77", parent="11"),
+                            timeline_post("21", parent="11", display="Tweet"), timeline_post("22", parent="12"))
+        material = parse_x_html(html, STATUS)
+        self.assertEqual(material.text, "Selected text")
+        self.assertFalse(material.partial)
+        self.assertEqual(material.details["thread"], {
+            "coverage": "partial", "previous_url": "https://x.com/writer/status/10",
+            "next_urls": ["https://x.com/writer/status/12"],
+        })
+
+    def test_thread_with_unseen_parent_keeps_gap_separate_from_post_text(self):
+        material = parse_x_html(conversation(timeline_post("11", parent="10")), STATUS)
+        self.assertEqual(material.details["thread"], {"coverage": "partial", "unseen_parent_id": "10"})
+        self.assertEqual(material.text, "Selected text")
+        self.assertFalse(material.partial)
+
+    def test_thread_context_preserves_a_truncated_post_and_rejects_conflicting_authors(self):
+        focal = timeline_post("11", parent="10")
+        focal["content"]["tweet_results"]["result"]["legacy"] = {"truncated": True}
+        html = conversation(focal, timeline_post("10", author="77"), timeline_post("12", parent="11"),
+                            timeline_post("12", author="77", parent="11"))
+        post = parse_x_html(html, STATUS)
+        self.assertTrue(post.partial)
+        self.assertEqual(post.details["scope"], "visible post preview")
+        self.assertEqual(post.details["thread"], {"coverage": "partial"})
+
+    def test_ordinary_replies_and_foreign_thread_context_do_not_mark_focal_post(self):
+        for html in (conversation(timeline_post("11", display="Tweet"), timeline_post("12", parent="11")),
+                     conversation(timeline_post("11"), timeline_post("12"), response_id="90")):
+            with self.subTest(html=html):
+                self.assertNotIn("thread", parse_x_html(html, STATUS).details)
+
+    def test_refresh_adds_thread_coverage_without_following_neighbors(self):
+        single = page(route("11"), relay(tweet("11", "Selected text")))
+        thread = conversation(timeline_post("11"), timeline_post("12", parent="11"))
+        with tempfile.TemporaryDirectory() as folder:
+            vault = Path(folder)
+            with patch.object(intake, "fetch", return_value=(single.encode(), STATUS, "text/html", "utf-8")):
+                old = intake.intake(vault, STATUS)
+            with patch.object(intake, "fetch", return_value=(thread.encode(), STATUS, "text/html", "utf-8")) as get:
+                self.assertTrue(intake.intake(vault, STATUS)["cached"])
+                get.assert_not_called()
+                fresh = intake.intake(vault, STATUS, refresh=True)
+                get.assert_called_once_with(STATUS)
+            self.assertEqual((fresh["status"], fresh["sha256"]), ("ready", old["sha256"]))
+            self.assertEqual(fresh["details"]["thread"]["next_urls"], ["https://x.com/writer/status/12"])
+            self.assertEqual((vault / fresh["material"]).read_text().strip(), "Selected text")
+
     def test_two_article_routes_bind_their_own_body(self):
         other = route("22", article=True, document=doc("<p>Reply Article</p>"))
         correct = route("11", article=True, document=doc("<p>Original Article</p>"))

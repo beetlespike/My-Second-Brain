@@ -568,6 +568,81 @@ def _object(node, *keys):
     return node if isinstance(node, dict) else {}
 
 
+def _rows(node, key):
+    value = node.get(key)
+    if isinstance(value, list):
+        yield from (row for row in value if isinstance(row, dict))
+
+
+def _conversation_items(conversation):
+    # Only inspect posts X placed on the timeline. Quoted posts may also contain reply IDs.
+    for instruction in _rows(conversation, "instructions"):
+        if instruction.get("__typename") != "TimelineAddEntries":
+            continue
+        for entry in _rows(instruction, "entries"):
+            content = _object(entry, "content")
+            if content.get("__typename") == "TimelineTimelineItem":
+                yield entry.get("entry_id"), _object(content, "content")
+            elif content.get("__typename") == "TimelineTimelineModule":
+                for row in _rows(content, "items"):
+                    yield None, _object(row, "item", "content")
+
+
+def _thread_context(payload, focal_id):
+    conversation = _object(payload, "data", "threaded_conversation_with_injections_v2")
+    if not conversation:
+        return None
+    selected = _object(payload, "data", "tweet_result_by_rest_id")
+    focal = _object(selected, "result")
+    if selected.get("rest_id") != focal_id or focal.get("rest_id") != focal_id or focal.get("__typename") != "Tweet":
+        return None
+    author = _object(focal, "core", "user_results", "result")
+    author_id = _text(author.get("rest_id"))
+    handle = _text(_object(author, "core").get("screen_name"))
+    focal_row = None
+    visible_authors = {}
+    children = []
+    for entry_id, item in _conversation_items(conversation):
+        wrapper = _object(item, "tweet_results")
+        tweet = _object(wrapper, "result")
+        tid = _text(tweet.get("rest_id"))
+        if (item.get("__typename") != "TimelineTweet" or tweet.get("__typename") != "Tweet"
+                or not re.fullmatch(r"[0-9]+", tid) or wrapper.get("rest_id") != tid):
+            continue
+        self_thread = item.get("display_type") == "SelfThread"
+        if tid == focal_id and entry_id == "tweet-" + focal_id:
+            if not self_thread or focal_row is not None:
+                return None
+            focal_row = tweet
+        row_author = _text(_object(tweet, "core", "user_results", "result").get("rest_id"))
+        visible_authors.setdefault(tid, set()).add(row_author)
+        if not author_id or row_author != author_id:
+            continue
+        if (self_thread and tid != focal_id and _object(tweet, "reply_to_results").get("rest_id") == focal_id
+                and _object(tweet, "reply_to_user_results").get("rest_id") in (None, author_id)):
+            children.append(tid)
+    if focal_row is None:
+        return None
+    context = {"coverage": "partial"}
+    row_author = _object(focal_row, "core", "user_results", "result").get("rest_id")
+    if author_id and row_author and row_author != author_id:
+        return None
+    if not author_id or not row_author or not re.fullmatch(r"[A-Za-z0-9_]+", handle):
+        return context
+    prefix = f"https://x.com/{handle}/status/"
+    parent_id = _text(_object(focal_row, "reply_to_results").get("rest_id"))
+    parent_author = _object(focal_row, "reply_to_user_results").get("rest_id")
+    if parent_id != focal_id and re.fullmatch(r"[0-9]+", parent_id):
+        if visible_authors.get(parent_id) == {author_id} and parent_author in (None, author_id):
+            context["previous_url"] = prefix + parent_id
+        elif parent_id not in visible_authors and parent_author == author_id:
+            context["unseen_parent_id"] = parent_id
+    next_urls = [prefix + tid for tid in dict.fromkeys(children) if visible_authors[tid] == {author_id}]
+    if next_urls:
+        context["next_urls"] = next_urls
+    return context
+
+
 def _clean_title(raw_title, handle="", author="", description="", fallback=""):
     title = _text(raw_title).strip()
     if title:
@@ -638,6 +713,7 @@ def parse_x_html(html, url=""):
     meta = _object(route, "metadata")
     head = _object(meta, "headMetadata")
     tweets = []
+    thread = None
     if focal_id:
         for record in records:
             if record.get("kind") != "Result.Ok" or not isinstance(record.get("value"), str):
@@ -647,6 +723,8 @@ def parse_x_html(html, url=""):
             except (ValueError, RecursionError):
                 continue
             tweets.extend(_tweet_results(data, focal_id))
+            if thread is None:
+                thread = _thread_context(data, focal_id)
 
     attachment = next((result for tweet in tweets
                        if (result := _object(tweet, "article", "article_results", "result"))), {})
@@ -704,6 +782,8 @@ def parse_x_html(html, url=""):
                 return Material(parser.markdown, "x_article", title, details)
     if expects_article:
         raise ReadError(error)
+    if thread:
+        details["thread"] = thread
     # Note Tweet text is complete. Its legacy counterpart may contain only the preview.
     for tweet in tweets:
         note = _object(tweet, "note_tweet", "note_tweet_results", "result")

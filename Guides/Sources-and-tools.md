@@ -18,6 +18,8 @@ python3 tools/intake.py 'https://arxiv.org/abs/2309.06180'
 
 The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/intake.md), link checks, and review tools (see [Tools and extensions](Tools-and-Extensions.md) for all commands and settings). Your assistant uses the returned evidence to write the source note, check existing concepts, and explain links. Learning progress is recorded separately.
 
+When X marks the selected post as part of an author’s thread, `details.thread.coverage` is `partial`. The top-level status describes the selected post’s text. The receipt can include links to a verified parent and direct continuations, or an `unseen_parent_id` if the page identifies the parent but omits its post. An absent thread field means the page supplied no verified thread context. Use `--refresh` to recheck a cached post.
+
 ### Bring your own reader
 
 ```sh
