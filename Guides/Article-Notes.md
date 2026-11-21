@@ -1,11 +1,13 @@
-# 从文章到知识
+# From Articles to Knowledge
 
-收到文章链接就读取原文正文。用户指出了段落或附上想法时，把它们带入整理。文章标题、发布时间、作者和原链接放在属性或来源说明中。文章保存到 Articles，使用 `type: article`、`status`、`evidence_status`，以及 `source_url` 或仓库相对的 `source_path`。
+[简体中文](文章笔记.md)
 
-正文保留关键主张、支持它的原文段落或图片、机制解释和必要条件。作者观点、原文证据、综合理解分别表达。重要图表要实际检查；没有读到的图片或正文不能作为依据。
+When handed an article link, start by reading the full available article text. Incorporate any sections or thoughts the user highlighted. Record title, publication date, author, and original URL in frontmatter or citation metadata. Store article notes under `Articles/` using `type: article`, `status`, `evidence_status`, and `source_url` (or vault-relative `source_path`).
 
-将可复用的机制连接到 Concepts。链接旁说明关系，同义概念补回已有页面。顺带出现的论文可以保留引用；需要它承担解释责任时，再建立论文笔记并核验原文。
+Keep key claims, supporting excerpts or figures, underlying mechanisms, and applicability boundaries clearly separated from your own synthesis. Inspect essential figures directly—never cite unread images or truncated text as verified support.
 
-`status` 可为 draft、reading、distilled，描述整理进度。`evidence_status` 可为 unchecked、partial、anchored、verified，描述来源核验程度。提炼完成不等于已核验，也不代表读者已经学会。
+Connect reusable mechanisms to `Concepts/`, stating why each link holds beside the link, and fold refinements into existing synonymous pages. Referenced papers can stay cited inline; spin up a dedicated paper note only when a paper carries primary explanatory responsibility and verify its original text.
 
-保存提炼后的解释。完整抓取结果放在个人 .local/，正式附件只保留实际使用且有权保存的部分。
+Use `status` (`draft`, `reading`, `distilled`) to track note preparation and `evidence_status` (`unchecked`, `partial`, `anchored`, `verified`) for source verification. Completing distillation does not mark personal mastery.
+
+Keep raw fetched pages in private `.local/`, storing only necessary, authorized excerpts inside vault notes.

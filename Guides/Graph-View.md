@@ -1,16 +1,16 @@
-# 在 Obsidian 看知识网络 · Obsidian graph view
+# Explore the knowledge graph in Obsidian
 
-用 Obsidian 打开完整示例库，在左侧选择「查看关系图谱」。灰蓝色是已经整理的概念，淡金色是 AI 建议学习的概念。点击节点可以读它与相邻节点为什么相连。示例使用英文文件名，中文概念名保留在笔记或别名里，两种语言看到的是同一张图。
+[简体中文](关系图谱.md)
 
-Open the full example folder as an Obsidian vault and select **Open graph view**. Blue-gray marks existing concepts. Pale gold marks proposed study nodes. Select one to read the explanation behind its links.
+From the downloaded repository, open `examples/demo-vault/` as an Obsidian vault. If you made a full copy with `workflow.py init`, open that copy instead. Select **Open graph view**, then enter a filter.
 
-| 在图谱面板的「筛选」中输入 · Graph filter | 视图 · View |
+| What to explore | Filter |
 | --- | --- |
-| `path:Concepts OR (path:待学概念 tag:#ai-suggested)` | 完整概念网络 · Full network |
-| `tag:#case-serving` | 推理服务 · LLM serving |
-| `tag:#case-tokenizers` | 多语言分词 · Multilingual tokenizers |
-| `tag:#case-rlvr` | 强化学习与解题覆盖 · RLVR and coverage |
+| All studied and suggested concepts in the example | `path:Concepts OR (path:待学概念 tag:#ai-suggested)` |
+| LLM serving | `tag:#case-serving` |
+| Multilingual tokenizers | `tag:#case-tokenizers` |
+| Reinforcement learning and problem coverage | `tag:#case-rlvr` |
 
-**沿用 README 的配色**　关闭示例库窗口，把 `assets/demo/obsidian-graph.json` 复制为 `.obsidian/graph.json`，将 `assets/demo/obsidian-graph.css` 放入 `.obsidian/snippets/`。已有配置可先备份。重新打开库，选深色外观并启用此样式片段。在全图筛选条件后加上 ` OR path:MOCs`，就能同时看主题地图。
+For the colors shown on the homepage, close the example vault window. Back up any existing graph settings. Inside that vault, copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` and `assets/demo/obsidian-graph.css` to `.obsidian/snippets/`. Reopen the vault, choose dark appearance and enable the snippet. Blue-gray nodes are studied concepts. Pale gold marks suggestions to explore. Open a node to read why it connects to its neighbors.
 
-**Use the README colors**　Close the example vault. Copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` and the companion CSS file to `.obsidian/snippets/`. Back up existing settings if needed. Reopen the vault, select dark appearance and enable the snippet. To include the topic maps, append ` OR path:MOCs` to the full-network filter. [Obsidian Graph view help](https://obsidian.md/help/plugins/graph)
+Append ` OR path:MOCs` to the full filter to include the topic maps. Obsidian lays out the nodes afresh when you open the graph. [Obsidian graph view help](https://obsidian.md/help/plugins/graph)

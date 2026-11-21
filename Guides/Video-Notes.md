@@ -1,11 +1,13 @@
-# 从视频到知识
+# From Videos to Knowledge
 
-收到视频链接就从可读的字幕或本地音频转写开始。用户指定了片段，就聚焦那段。分别记录字幕、转写、画面和附带讲义能支持哪些内容。视频笔记保存到 Videos，使用 `type: video`、`source_url` 或 `source_path`、`status` 和 `evidence_status`。
+[简体中文](视频笔记.md)
 
-以时间戳定位重要解释，正文按理解顺序组织。字幕可以支持讲者说过什么；图表、屏幕代码和手写公式需要画面或对应讲义核验。讲义补充与视频讲解保持可辨。
+When handed a video link, start from readable captions or an existing local audio transcript, focusing on any timestamp segment the user highlighted. Record separately what captions, transcription, visual frames, and companion slides actually support. Save video notes under `Videos/` with `type: video`, `source_url` (or `source_path`), `status`, and `evidence_status`.
 
-优先使用用户提供或可合法读取的字幕。没有字幕时，可以使用现成转写工具，保留模型与读取范围；技术词、数字和否定词要重点核查。转写工具不是本项目的必需依赖。
+Anchor key explanations with timestamps and organize prose by conceptual flow rather than transcript order. Captions establish what the speaker said; charts, on-screen code, or handwritten derivations require checking visuals or handouts directly, keeping handout notes distinguishable from video narration.
 
-单集课程应能独立阅读，必要前提在正文说明，再链接到相关 Concepts。未读的前后课程、评论和画面不计入覆盖范围。
+Prefer publisher captions or authorized transcripts. When captions are absent and local transcription is available, carefully check technical terms, numbers, and negations (local ASR tools are optional, never mandatory).
 
-完整字幕、音视频与临时抽帧放在个人 .local/；正式页保留必要时间戳、来源和解释。合成演示中的字幕须明确标注其教学样例身份。
+Make single-lecture notes self-contained by noting missing prerequisites clearly and linking into `Concepts/`. Unread adjacent lectures, comments, or unseen frames remain outside covered scope.
+
+Store full transcripts, media caches, and temporary frames in private `.local/`, retaining only necessary timestamps, citations, and explanations in the vault. Clearly mark any synthetic demo transcripts as practice samples.

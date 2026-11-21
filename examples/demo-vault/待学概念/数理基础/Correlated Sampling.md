@@ -32,7 +32,7 @@ $$\operatorname{Var}(\bar X)=\frac{1}{n^2}\left[\sum_i\operatorname{Var}(X_i)+2\
 
 如果每条原始观测都占三行，均值和标准误各怎样变化？先写出新均值，再想想如果把 3m 行当成独立观测，会把标准误算成多少。
 
-可以让 Codex 等你先算，再解释卡住的那一步。例子是合成材料，定义可回到[样本均值](../../Concepts/数理基础/Sample%20Mean.md)。[学习提示](../../Prompts/带学新概念.md)
+可以让 Codex 等你先算，再解释卡住的那一步。例子是合成材料，定义可回到[样本均值](../../Concepts/数理基础/Sample%20Mean.md)。
 
 ## 知识卡
 

@@ -1,31 +1,33 @@
-# 概念与主题地图
+# Concepts and Topic Maps
 
-## 从学过的一份材料里留下什么
+[简体中文](网络与主题地图.md)
 
-一段生成模型的讲解里，可能有三个可以分别说清的概念。预填充解释模型什么时候得到第一个输出，KV 缓存解释下一步能复用哪些计算，连续合批解释一条短请求结束后谁能用空出来的位置。一篇资料笔记可以指向这三个节点。每个节点各自讲清原理、成立条件和一个例子，读者从别处走进来也能读懂。
+## What to Keep from One Studied Source
 
-## 为一条连线写一句理由
+A single lecture on generative inference might cover three separate mechanisms worth explaining cleanly: prefill explains when the model produces its first output token, KV cache explains how subsequent steps reuse past key/value tensors, and continuous batching explains how finished sequences free slots for waiting requests. One source note can point to all three concept pages. Give each concept page its own mechanism, applicability conditions, and a self-contained example so any reader arriving from another path can follow it directly.
 
-可以顺着一句具体的解释找链接。比如「检索增强生成把选中的段落放进提示词，因而改变了预填充要处理的长度」。这句话既能写在讲 RAG 的地方，也能从预填充那一端读回来。也可以写清一种方法依赖哪个前提，一个反例揭示了哪条边界，或一项改动会改变哪个测量结果。链接请优先使用标准相对路径 Markdown 链接（各类编辑器与图谱工具均可识别）。
+## Explain Every Link in Prose
 
-有了新材料，先看看它带来了哪些概念。某个概念已有同义页，可以给原页补一个推导、例子或适用条件。只有题材相近、还说不出具体关系的两页，可以先各自保留。
+Start links from concrete causal explanations. For example: *“Retrieval-augmented generation places selected chunks into the prompt, which increases the sequence length handled during prefill.”* That sentence works naturally both inside a RAG note and linked back from Prefill. State which assumption a method relies on, what counterexample reveals a boundary, or how one change shifts a measurement. Always use standard relative Markdown links (`[Concept Name](../Concepts/...md)`) so any Markdown editor or graph view can traverse them.
 
-## 主题地图（MOC）
+Before creating a new page, see what concepts an incoming source adds or refines. If a synonymous concept already exists, add a derivation, concrete example, or boundary condition there. Keep topically similar notes separate if you cannot yet state their specific relationship.
 
-当几条联系合在一起能回答一个较大的问题，就适合写一张 Map of Content。地图给出目前能讲通的答案，选取解释它的节点，也给尚未解决的部分留个位置。同一概念在不同问题中承担的作用可能不同，各张地图可以链接到同一页。
+## Maps of Content (MOCs)
 
-例如，沿「检索与生成」思考，先看哪些证据能进入提示词，再看模型怎样处理选中的文字。沿「推理系统」追问首个 token 何时出现，也会走到预填充。前一张地图可以在这里指向后一张，把调度和缓存的解释留在那里。读者能从两边走进同一个节点，也能顺着具体问题换一张地图。
+When several connected concepts together answer a broader question, organize them into a Map of Content (`MOCs/`). A map frames the working answer, selects the concepts that explain it, and leaves explicit room for open questions. The same concept can appear in multiple maps when it plays different roles.
 
-你的助手编的第一张地图可以只写一小段。它用问题作标题，写出你学过的解释，链接相关概念。遇到容易混淆的做法，可以请它并排比较。你也可以留下自己的疑问，等有了新理解，再让助手更新地图。
+For instance, tracing *Retrieval and Generation* focuses on which evidence enters the prompt, while tracing *Inference Systems* asks why the first token waits—and both paths meet at Prefill. One map can point readers across to the other, keeping scheduling and memory details where they belong.
 
-概念页放在 `Concepts/`，属性用 `type: concept` 和 `status: active`。地图放在 `MOCs/`，用 `type: moc` 和 `status: active`，从 `MOCs/Knowledge-Index.md`、`MOCs/知识库入口.md` 或已有主题地图连进来。概念页可选用 `stage: seed | working | hub` 标记笔记的成熟度。
+The first map your assistant drafts can be short: pose a question as the title, summarize what you worked out so far, and link the supporting concepts. Put commonly confused alternatives side by side, and jot down open doubts to update as understanding deepens.
 
-## 从这些联系推想还缺什么
+Store concept pages under `Concepts/` with `type: concept` and `status: active` (and optional `stage: seed | working | hub`). Store maps under `MOCs/` with `type: moc` and `status: active`, linking each map into `MOCs/Knowledge-Index.md` (or `MOCs/知识库入口.md`) or neighboring maps.
 
-一张地图上留下的问题，有时正好牵涉另一张地图里的概念。比如，检索与重排决定段落的先后，预填充处理进入提示词的内容，RAG 的回答需要其中的证据。如果有关材料装不下，就有了「检索上下文预算」这个问题。让助手说明新概念对每个节点分别意味着什么，再按含义和别名查一次重。已有节点漏了一条关系时，补上那条线就够了。
+## Discovering Missing Concepts from Existing Links
 
-确有新概念时，可以先在 `待学概念/` 里写下定义、相连的概念和一道可以自己做的题。用 `学习状态: 待学` 和 `ai-suggested` 标签标出它。想随复习一起学习，可以补一张[知识卡](Flashcard-Review.md#新概念卡)。
+Questions left open on one map often point to bridges with another. Retrieval and reranking order passages; prefill computes the expanded prompt; generation relies on evidence surviving selection. When context windows or budgets tighten, the *Retrieval Context Budget* gap becomes clear. Ask your assistant to explain what a candidate concept changes at each connected node, and deduplicate by meaning and aliases—sometimes an existing note simply missed a relationship.
 
-## 学过以后
+When a genuine discovery emerges, draft a standalone study note under `Study-Queue/` (or `待学概念/` in Chinese/bilingual vaults) with a clear definition, linked concepts, and a concrete exercise. Tag it `ai-suggested` (and track study state cleanly). Add a [Study Card](Flashcard-Review.en.md#new-concept-cards) section to surface it alongside your daily review cards.
 
-[理解新概念](../Prompts/带学新概念.md)时，记下自己的解释和还没解决的问题，暂停时可标为 `学习状态: 在学`。能说明机制、完成练习或明确表示已学会时，把原页移入 `Concepts/` 或并入同义页，更新入链、相关主题地图与学习状态。复习卡从正式概念页出题，修改后核对受影响的卡片版本。保留原有手写内容和历史反馈。
+## After You Learn It
+
+When [walking through a new concept](../Prompts/study-concept.md), record your own explanation and open questions; mark it as in progress if you pause midway. Once you can explain the mechanism, finish the exercise, or confirm understanding explicitly, fold the note into `Concepts/`, merge any duplicate aliases, update incoming links and topic maps, and prepare review cards. Always preserve handwritten notes and past card feedback.

@@ -1,13 +1,15 @@
-# 从论文到知识
+# From Papers to Knowledge
 
-收到论文链接就查看已有解析或读取公开正文。用户给出章节或推导时优先整理那里。摘要、正文和图表分别记录实际覆盖范围。可以沿用 MinerU、Docling 或其他工具生成的 Markdown，保留页码、章节和图表的位置。
+[简体中文](论文笔记.md)
 
-论文页保存到 Papers，使用 `type: paper`、`paper_note_kind: full` 或 `card`、`source_url` 或 `source_path`、`status` 和 `evidence_status`。题名、作者、日期及正式论文链接应可核对。
+When handed a paper link, inspect any existing local parse or read the accessible full text—focusing first on sections or derivations the user specified. Track separately what the abstract, body text, and figures actually cover. Markdown exports from MinerU, Docling, or similar tools work well when page numbers, section titles, and figure/table positions are preserved.
 
-围绕问题解释方法的输入、操作、输出和条件。重要结论绑定 Section、Figure、Table、Equation 或实际页码。公式、实验数值和图表需要交叉检查，解析文本无法解决的疑点保留待核；解析成功不证明内容正确。
+Save paper notes under `Papers/` using `type: paper`, `paper_note_kind: full` or `card`, `source_url` (or vault-relative `source_path`), `status`, and `evidence_status`. Ensure title, authors, publication date, and official link stay verifiable.
 
-这次只读了摘要或二手介绍时，可以先记下实际学到的内容，并注明依据范围。需要原文核验的结论、图表或结果留作待查问题，等读到原文后再补。
+Explain each method’s inputs, operations, outputs, and boundary conditions around a concrete problem. Anchor key claims to exact Section, Figure, Table, Equation, or page references. Cross-check equations, experimental numbers, and plots against the original; mark unresolved parse questions explicitly rather than guessing (a clean PDF conversion does not prove mathematical correctness).
 
-将通用机制写进 Concepts，资料页保留论文特定假设、证据和限制。不同论文对同一问题的比较可进入 MOCs。
+If only an abstract or secondary overview was read, record what was actually covered and list verification questions to revisit once the full paper is available.
 
-公开示例中的教学实验报告明确标为合成材料，没有作者、会议或真实研究成果声明。个人论文与未公开研究不能自动成为公开样例。
+Place general mechanisms in `Concepts/`, reserving paper-specific assumptions, experimental setups, and caveats inside the paper note. Cross-paper comparisons around one question belong in `MOCs/`.
+
+Synthetic practice reports included for offline testing must remain clearly labeled as synthetic samples with zero real publication claims. Never promote private manuscripts or unpublished research into public examples automatically.

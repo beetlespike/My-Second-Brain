@@ -15,7 +15,7 @@ python3 tools/intake.py 'https://arxiv.org/abs/2309.06180'
 | Papers | Uses a configured local parse first. An arXiv abstract link tries the HTML, then the PDF at the same version. A PDF link tries the PDF first. It can follow a designated paper PDF from a publisher page. An abstract is labelled separately. | Supply existing MinerU or Docling Markdown, a PDF, or OCR from scanned pages. Check figures and important equations against the original. |
 | Chats, books and practice | Reads selected Markdown or text files. | History access comes from the host. Markdown and plain-text chat exports, excerpts and lab notes work too. [Automation](Automation.md) |
 
-The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/整理材料.md), link checks and review tools. Your assistant uses the returned evidence to write the source note, check existing concepts and explain links. Learning progress is recorded separately.
+The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/intake.md), link checks, and review tools (see [Tools and extensions](Tools-and-Extensions.md) for all commands and settings). Your assistant uses the returned evidence to write the source note, check existing concepts, and explain links. Learning progress is recorded separately.
 
 ### Bring your own reader
 

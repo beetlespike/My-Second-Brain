@@ -2,19 +2,19 @@
 
 [简体中文](自动整理与维护.md)
 
-In my personal workflow, I run a Codex automation to read selected study conversations from Codex and ChatGPT and turn what I studied into concept updates, topic maps, and candidate study notes. Any local AI assistant paired with a scheduler (or your OS scheduler) can drive the same core vault workflow for browser cards and local files, while chat-history sweeping depends on whether your client exposes history.
+In my personal workflow, I run a Codex automation to keep my vault up to date—reading selected study conversations, extracting concepts, and preparing daily cards directly onto the vault’s fixed private webpage so I just drop links and open one browser bookmark. Any local AI assistant paired with a scheduler (or your OS scheduler) can drive the exact same local vault workflow, while automatic chat-history sweeping depends on whether your host client exposes conversation history.
 
 ## Daily knowledge cards
 
-Each vault has a fixed private local browser address (`Today.command` / `Today.cmd`). Open Today’s Cards once on the computer holding the vault and bookmark it. Review, rate, or leave questions whenever you like. Clicking **Save** writes to your vault and updates review intervals immediately. Written comments stay under **My comments and replies** until your assistant resolves them on its next card run (or sooner if you ask it directly).
+Every vault has one persistent private webpage address served on localhost (`127.0.0.1`). Open Today’s Cards once on the computer holding the vault and bookmark it. From then on, flip cards, rate recall, or leave written questions right in your browser—never touching an editor or chat prompt unless you want to. Clicking **Save** writes to your vault and updates review schedules immediately. Written comments queue under **My comments and replies** until your assistant handles them on its next card run (or sooner if you ask).
 
-Any AI assistant that can read and write your vault and run local commands can run this daily task (or be triggered by your system scheduler). Run it once during setup so the fixed bookmark serves published decks:
+Configure any AI assistant that can read/write your vault and run local commands (or trigger it via your system scheduler) with this daily prompt—then run it once during setup so your fixed bookmark starts serving published decks:
 
-> Work in this vault using `Prompts/每日复习.md`. Start with outstanding comments. Answer the question, revise the card or add a related one, then leave me the result. Use what I’ve studied since to update review cards. When a new concept connects ideas in the vault, make a study card. Publish today’s cards at my private address.
+> Work in this vault using `Prompts/daily-review.md`. Start with outstanding comments. Answer the question, revise the card or add a related one, then leave me the result. Use what I’ve studied since to update review cards. When a new concept connects ideas in the vault, make a study card in `Study-Queue/`. Publish today’s cards to the vault’s private webpage.
 
-The bookmark keeps showing the previous deck until a new one is ready. If another local process holds the port, the launcher asks you to retry once free while preserving the same address. Your assistant can check the URL anytime with `today --no-open`. For on-demand local selection without an assistant publish, `daily --on-demand` switches back to picking cards when opened. Vaults use the machine’s local date unless `timezone` is set in `.secondbrain.json`.
+The bookmark keeps showing the previous deck until a new one is ready. If another local process holds the port, the launcher asks you to retry once free while preserving the same URL. `Today.command` (macOS), `sh Today.command` (Linux), or `Today.cmd` (Windows) simply starts that local server if you visit the bookmark before chatting (for instance after rebooting). Your assistant can also print the URL anytime with `today --no-open`. For on-demand card picking without an assistant publish, `daily --on-demand` switches back to picking cards when opened. Vaults use local machine date unless `timezone` is set in `.secondbrain.json`.
 
-Open browser cards on the computer that holds the vault. If your host client also supports embedded interactive card widgets in chat (as Codex desktop does), adding `--chat-output <path>` lets you mirror cards into chat, and **Send to chat to save** writes to the same SQLite records as browser **Save feedback**. [Card format](Flashcard-Review.en.md#new-concept-cards)
+Browser cards work cleanly across all editors and assistants. *(Optional bonus: if your desktop host supports interactive card widgets directly inside chat, adding `--chat-output <path>` lets you mirror cards in chat too, sharing the same SQLite records.)* [Card format](Flashcard-Review.en.md#new-concept-cards)
 
 ## Check what your environment supports
 
@@ -35,11 +35,11 @@ Desktop scheduled tasks accessing local vaults generally require the machine awa
 
 ## A prompt to adapt
 
-Try a manual run before picking a cadence—every few days is a reasonable baseline, scaled by how much you study.
+Try a manual run before picking a cadence—every few days is a reasonable baseline, scaled by how much you study:
 
-> Resume where you left off and follow `Prompts/整理材料.md` for the parts I studied in the selected conversations or exports. Use my follow-up questions, explanations, exercises, or confirmation to tell what I covered. Keep sources and preserve my edits. Use `Prompts/回顾与补学.md` to find a missing concept that can connect several existing nodes. Write to the designated vault, check links and card sources, and track what you read and what still needs checking in `.local/` alongside your source cache.
+> Resume where you left off and follow `Prompts/intake.md` for the parts I studied in the selected conversations or exports. Use my follow-up questions, explanations, exercises, or confirmation to tell what I covered. Keep sources and preserve my edits. Use `Prompts/discover-concepts.md` to find a missing concept that can connect several existing nodes. Write to the designated vault, check links and card sources, and track what you read and what still needs checking in `.local/` alongside your source cache.
 
-Always constrain the allowed conversations/folders, destination vault, cadence, and budget. Tasks should read real messages rather than titles or summaries. Keeping `.local/maintenance.md` lets each run pick up cleanly from the previous cursor.
+Always constrain allowed conversations/folders, destination vault, cadence, and budget. Tasks should read real messages rather than titles or summaries. Keeping `.local/maintenance.md` lets each run pick up cleanly from the previous cursor.
 
 After a few runs, spot-check one updated concept note and one suggested study note to confirm every link rests on a real explanation rather than vague similarity.
 

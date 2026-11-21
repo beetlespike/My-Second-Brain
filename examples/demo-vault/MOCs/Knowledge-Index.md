@@ -9,7 +9,7 @@ status: active
 
 Each map of content (MOC) centers on a concrete question and pulls together the concepts that explain it. The same concept can appear in several maps: retrieval decides which passages enter the prompt, while serving determines when the model finishes reading them—so both maps rely on *Prefill and Decode*.
 
-[Explore the graph in Obsidian](../Guides/Graph-View.md)
+Open this folder as a vault in Obsidian and choose **Open graph view**. To follow the serving example, filter the graph by `tag:#case-serving`.
 
 | Topic map | Central question | Key concepts |
 | --- | --- | --- |
@@ -37,10 +37,10 @@ When adding more retrieved passages, combine evidence checks from [Model Evaluat
 
 Computing standard error, choosing sample size and estimating uncertainty in paired evaluations all depend on whether observations are independent. Working through [Correlated Sampling](../待学概念/数理基础/Correlated%20Sampling.md) shows how duplicated records or clustered test items alter those calculations.
 
-Ask your AI assistant to [discover missing nodes from the network](../Prompts/回顾与补学.md) to find unrecorded concepts that bridge several ideas you already know. Pick one study note and walk through its [worked examples and exercises](../Prompts/带学新概念.md).
+Ask your AI assistant to discover missing nodes from the network to find unrecorded concepts that bridge several ideas you already know (stored in `Study-Queue/` or, in this showcase vault, `待学概念/`). Pick one study note and walk through its worked examples and exercises.
 
 ## Study and review
 
-[The study queue guide](../待学概念/待学概念导读.md) tracks open questions worth exploring next. Existing review decks live in [Sampling Estimation](../Flashcards/抽样估计.md) and [Concept Connections](../Flashcards/概念之间的联系.md). At your vault’s private card URL, try recalling the answer before flipping, rate recall, or leave a question—your assistant works through pending comments on its [daily review run](../Prompts/每日复习.md) before publishing the next deck.
+[The study queue guide](../待学概念/待学概念导读.md) tracks open questions worth exploring next. Existing review decks live in [Sampling Estimation](../Flashcards/抽样估计.md) and [Concept Connections](../Flashcards/概念之间的联系.md). At your vault’s fixed private webpage URL, try recalling the answer before flipping, rate recall, or leave a question—your assistant handles pending comments on its daily review run before publishing the next deck.
 
 This repository includes worked example knowledge. Your own mastery and learning state are tracked solely from your discussions, exercises and explicit feedback.

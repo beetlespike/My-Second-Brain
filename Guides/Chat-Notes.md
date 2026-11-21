@@ -1,13 +1,15 @@
-# 从学习对话到知识
+# From Study Chats to Knowledge
 
-在用户选定或已授权的学习对话中，整理本人已经讨论过或确认读过的部分。保留理解所需的提问、回复、纠正与图片，记录实际读取的消息范围。不能读取的部分留作缺口。
+[简体中文](对话笔记.md)
 
-Chats 保存提炼后的解释，使用 `type: chat`、`source_platform`、`source_url` 或仓库相对 `source_path`、`status` 与 `evidence_status`。没有稳定公开链接时，可将选定片段保存在个人 .local/ 并引用；不生成不存在的地址。
+Within user-selected or authorized learning conversations, organize only the parts the user actually worked through or confirmed reading. Keep necessary questions, answers, corrections, and images, and record the exact message range covered; note unreadable sections as gaps.
 
-正文按知识的理解顺序展开：为什么问、对象与条件是什么、怎样解释、哪个例子或纠正改变了理解。AI 的长解释可以提炼进正文，并保留核验状态。
+Store distilled chat notes under `Chats/` with `type: chat`, `source_platform`, `source_url` (or vault-relative `source_path`), `status`, and `evidence_status`. When no stable link exists, store the authorized excerpt in the vault’s private `.local/` directory and set `source_path` to its actual vault-relative path—never invent unreachable URLs.
 
-对话内容、外部核验与综合理解分别注明。只有用户明确说过的观点才归属于本人；AI 建议和完整答案不能证明用户掌握。需要补充原文或可靠实现时，记录它支持的是哪一步。
+Organize prose by learning progression: what prompted the question, what objects and conditions apply, how the explanation works, and which example or correction shifted understanding. Distill lengthy AI explanations while marking verification status clearly.
 
-沿概念含义和已有别名去重，更新对应 Concepts 和必要的 MOCs。重复提问可以合并出处；回看概念页是否真正解释了该问题。
+Keep conversation claims, external source checks, and synthesized understanding distinct. Attribute positions to the user only when they explicitly stated or confirmed them; AI explanations alone do not establish personal mastery. Where an external paper or implementation backs up a step, record what it verifies.
 
-增量整理的已读范围与待补读项放在个人 .local/ 中。历史工具不可用时，使用用户提供的片段；不默认扫描其他目录、账号、完整聊天或私人事务。
+Deduplicate by concept meaning and aliases, updating `Concepts/` and relevant `MOCs/`, and review updated pages to ensure they clearly answer the motivating question.
+
+Keep incremental read cursors and follow-ups inside `.local/`. When history tools are unavailable, use saved excerpts or exports provided by the user—never scan unrelated folders, accounts, or private messages by default.

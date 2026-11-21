@@ -28,7 +28,7 @@ from source_text import (
 from video_source import available_model, transcribe, video
 
 
-ROOT = Path(__file__).resolve().parents[1]
+TOOL_ROOT = Path(__file__).resolve().parents[1]
 LIMIT = 48 * 1024 * 1024
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
 CAPTION_EXTS = {".srt", ".vtt", ".json3"}
@@ -466,7 +466,11 @@ def main():
         metavar="FILE_OR_URL",
         help="local text, PDF, parser output or a publisher caption URL",
     )
-    p.add_argument("--root", type=Path, default=ROOT)
+    example = TOOL_ROOT / 'examples' / 'demo-vault'
+    default_root = TOOL_ROOT
+    if example.resolve() == example and (example / '.secondbrain.json').is_file() and not (TOOL_ROOT / 'Flashcards').is_dir():
+        default_root = example
+    p.add_argument("--root", type=Path, default=default_root)
     p.add_argument("--refresh", action="store_true")
     p.add_argument("--scope", choices=("excerpt", "abstract"), help="label a supplied excerpt or abstract")
     p.add_argument("--language", help="preferred caption language, e.g. en or zh")
@@ -474,6 +478,8 @@ def main():
     speech.add_argument("--asr-model", type=Path, help="existing faster-whisper model directory")
     speech.add_argument("--no-asr", action="store_true", help="try captions without transcribing audio")
     args = p.parse_args()
+    if args.root.resolve() == TOOL_ROOT:
+        args.root = default_root
     ascii_output = not (sys.stdout.encoding or "utf-8").lower().startswith("utf")
     try:
         result = intake(args.root, args.source, args.supplied, args.asr_model, args.language,

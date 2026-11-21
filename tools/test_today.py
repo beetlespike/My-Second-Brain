@@ -87,6 +87,27 @@ class TodayTests(unittest.TestCase):
         self.assertEqual(self.http(url, payload, origin='https://example.org')[0], 403)
         self.assertEqual(len(self.run_cli('notes')), 1)
 
+    def test_existing_bookmark_and_feedback_survive_sample_directory_move(self):
+        old_url = self.run_cli('today', '--no-open')['url']
+        old_deck, _ = self.deck(old_url)
+        self.assertEqual(self.http(old_url, self.feedback(old_deck))[0], 200)
+        self.stop(self.vault)
+
+        example = self.vault / 'examples/demo-vault'
+        example.mkdir(parents=True)
+        for folder in workflow.NOTE_DIRS + ('assets',):
+            source = self.vault / folder
+            if source.exists():
+                source.rename(example / folder)
+        (example / '.secondbrain.json').write_bytes((self.vault / '.secondbrain.json').read_bytes())
+        self.assertFalse((example / '.flashcards').exists())
+        self.assertEqual(self.run_cli('--root', str(self.vault), 'audit')['eligible'], 15)
+        self.assertEqual(self.run_cli('today', '--no-open')['url'], old_url)
+        self.assertEqual(self.run_cli('--root', str(example), 'today', '--no-open')['url'], old_url)
+        self.assertEqual(self.deck(old_url)[0]['workspace_id'], old_deck['workspace_id'])
+        self.assertEqual(self.run_cli('daily')['pending_count'], 1)
+        self.assertFalse((example / '.flashcards/local/review.sqlite3').exists())
+
     def test_language_switch_preserves_deck_and_feedback(self):
         url = self.run_cli('today', '--no-open')['url']
         deck, _ = self.deck(url + '?lang=en')
