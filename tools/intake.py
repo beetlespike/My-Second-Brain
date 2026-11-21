@@ -26,6 +26,7 @@ from source_text import (
     supplied_parse,
 )
 from video_source import available_model, transcribe, video
+from x_source import canonical_url, is_x_url, parse_x_html
 
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
@@ -83,10 +84,33 @@ def fetch(url):
     req = Request(url, headers={"User-Agent": USER_AGENT})
     try:
         response = build_opener(WebRedirects()).open(req, timeout=20)
-    except HTTPError:
+    except HTTPError as exc:
+        if exc.code in (403, 407):
+            body = b""
+            try:
+                body = exc.read(1024) or b""
+            except OSError:
+                pass
+            text = body.decode("utf-8", "replace")
+            ctype = (exc.headers.get_content_type() or "").lower() if exc.headers else ""
+            if (
+                (not ctype or ctype.startswith("text/plain") or len(body) < 512)
+                and re.search(
+                    r"not allowed by policy|blocked by .*policy|tunnel connection failed",
+                    text,
+                    re.I,
+                )
+            ):
+                raise NetworkUnavailable(
+                    "当前终端的网络代理或策略不允许访问原站。请通过宿主的联网审批重试同一读取命令。"
+                ) from exc
         raise
     except URLError as exc:
-        if isinstance(exc.reason, (socket.gaierror, PermissionError)):
+        if isinstance(exc.reason, (socket.gaierror, PermissionError)) or re.search(
+            r"tunnel connection failed:\s*(?:403|407)|not allowed by policy|operation not permitted",
+            str(exc.reason),
+            re.I,
+        ):
             raise NetworkUnavailable(
                 "当前终端的网络或 DNS 无法访问原站。请通过宿主的联网审批重试同一读取命令。"
             ) from exc
@@ -116,6 +140,8 @@ def platform(url):
         return "youtube"
     if host == "mp.weixin.qq.com":
         return "wechat"
+    if is_x_url(url):
+        return "x"
     if (
         domain("arxiv.org")
         or domain("openreview.net")
@@ -135,9 +161,18 @@ def read_file(data, suffix, source_type):
     if suffix in CAPTION_EXTS or suffix == ".json" or data.lstrip(b"\xef\xbb\xbf").startswith(b"WEBVTT"):
         return caption_material(data, suffix)
     if suffix in (".html", ".htm") or data.lstrip()[:30].lower().startswith((b"<!doctype html", b"<html")):
-        page = Page(decode(data))
+        html = decode(data)
+        page = Page(html)
         if source_type in ("bilibili", "youtube") or page.meta.get("og:type", "").startswith("video"):
             raise ReadError("视频观看页本身不能作为字幕，请选择字幕文件或浏览器里读到的逐字稿。")
+        if source_type == "x" or (
+            source_type in ("web", "file")
+            and (
+                "X (formerly Twitter)" in page.meta.get("og:site_name", "")
+                or is_x_url(page.meta.get("og:url", ""))
+            )
+        ):
+            return parse_x_html(html)
         if source_type == "paper":
             if page.section_prose:
                 return paper_body(page)
@@ -221,7 +256,10 @@ def online(url, kind, work, model, language):
     suffix = Path(urlsplit(final).path).suffix.lower()
     if suffix in CAPTION_EXTS or mime in ("text/vtt", "text/plain", "text/markdown"):
         return read_file(data, suffix if suffix in CAPTION_EXTS else ".txt", kind)
-    page = Page(decode(data, encoding))
+    html = decode(data, encoding)
+    if kind == "x" or is_x_url(final):
+        return parse_x_html(html, final)
+    page = Page(html)
     if kind == "paper" or page.meta.get("citation_pdf_url") or page.meta.get("citation_title"):
         if page.section_prose:
             return paper_body(page)
@@ -362,13 +400,14 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
     root = root.resolve()
     if not root.is_dir():
         raise ReadError("请选择已有的学习目录。")
-    source = source_locator(source)
-    is_web = source.startswith(("http://", "https://"))
-    if not is_web and "://" in source:
+    raw_source = source_locator(source)
+    is_web = raw_source.startswith(("http://", "https://"))
+    if not is_web and "://" in raw_source:
         raise ReadError("请选择 HTTP(S) 链接或本地文件。")
-    path = None if is_web else Path(source).expanduser().resolve()
+    path = None if is_web else Path(raw_source).expanduser().resolve()
+    kind = platform(raw_source) if is_web else "file"
+    source = canonical_url(raw_source) if (is_web and kind == "x") else raw_source
     source_label = source if is_web else path.name
-    kind = platform(source) if is_web else "file"
     uses_video_reader = kind in ("bilibili", "youtube") and not supplied
     if auto_asr and model is None and (uses_video_reader or Path(supplied or source).suffix.lower() in AUDIO_EXTS):
         model = available_model()
@@ -384,7 +423,9 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
     provided = supplied
     if is_web and not supplied:
         try:
-            mapped = configured_file(root, source)
+            mapped = configured_file(root, raw_source)
+            if mapped is None and source != raw_source:
+                mapped = configured_file(root, source)
             if mapped is not None:
                 mat = file_material(mapped, kind, model)
                 provided = str(mapped)
@@ -414,6 +455,8 @@ def intake(root, source, supplied=None, model=None, language=None, refresh=False
         mat.details["local_file_issue"] = local_issue
     if mat.kind == "wechat_body":
         kind = "wechat"
+    elif mat.kind in ("x_article", "x_post"):
+        kind = "x"
     elif mat.kind in ("paper_html", "abstract"):
         kind = "paper"
     elif kind == "file" and mat.kind in ("captions", "local_asr"):

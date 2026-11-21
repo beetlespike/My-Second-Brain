@@ -1,6 +1,8 @@
 """Offline regressions for source intake and evidence extraction."""
 
 import codecs
+from email.message import Message
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -8,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 import intake
@@ -260,3 +263,221 @@ class SourceIntakeTests(unittest.TestCase):
         override = self.root / "custom-video-cache"
         with patch.dict(os.environ, {"VIDEO_NOTE_CACHE_DIR": str(override)}, clear=False):
             self.assertEqual(shared_runtimes(), (override,))
+
+    def test_x_article_ssr_parts_extracts_body_links_and_image_count(self):
+        article_html = (
+            '<h3 class="font-article"><span>Section One</span></h3>'
+            '<p class="font-article"><span>Compare with </span>'
+            '<a href="https://arxiv.org/abs/2406.17557"><span>The FineWeb Datasets</span></a>.</p>'
+            '<blockquote><span>Loop summary here.</span></blockquote>'
+            '<ul><li><span>Item one</span><br><span>Second line</span></li></ul>'
+            '<figure><a href="/allen/article/100/media/901"><img src="https://pbs.twimg.com/media/ex.png" alt="Loop"></a></figure>'
+        )
+        ssr = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:title" content="Allen on X: &quot;Data Taste&quot; / X">'
+            '<meta property="og:description" content="Data Taste">'
+            "</head><body>"
+            "<script>"
+            "articleDocument:$R[7]={contentKey:\"[]\",parts:$R[9]=[$R[10]={type:\"html\",html:"
+            + json.dumps(article_html).replace("<", "\\x3C")
+            + "}]},"
+            'metadata:$R[12]={authorName:"Allen",focalTweetId:"2123813175644782633",hasArticle:!0,'
+            'headMetadata:{author:{screenName:"allen_datumwell"},bodyText:"https://t.co/abc",'
+            'publishedTime:"2026-11-20T16:18:14.000Z"}}'
+            "</script>"
+            "<article><p>Reply comment that must not appear</p></article>"
+            "</body></html>"
+        ).encode("utf-8")
+        url = "https://x.com/allen_datumwell/status/2123813175644782633?a=NonPRCM&s=20"
+        with patch.object(intake, "fetch", return_value=(ssr, "https://x.com/allen_datumwell/status/2123813175644782633", "text/html", "utf-8")):
+            res = intake.intake(self.root, url)
+        self.assertEqual((res["status"], res["source_type"], res["evidence"]), ("ready", "x", "x_article"))
+        self.assertEqual(res["source"], "https://x.com/allen_datumwell/status/2123813175644782633")
+        self.assertEqual(res["title"], "Data Taste")
+        self.assertEqual(res["details"]["author"], "Allen")
+        self.assertEqual(res["details"]["handle"], "allen_datumwell")
+        self.assertEqual(res["details"]["images_listed"], 1)
+        self.assertFalse(res["details"]["images_read"])
+        self.assertEqual(res["details"]["referenced_urls"], ["https://arxiv.org/abs/2406.17557"])
+        text = (self.root / res["material"]).read_text(encoding="utf-8")
+        self.assertIn("### Section One", text)
+        self.assertIn("[The FineWeb Datasets](https://arxiv.org/abs/2406.17557)", text)
+        self.assertIn("> Loop summary here.", text)
+        self.assertIn("- Item one\n  Second line", text)
+        self.assertIn("[Image 1: Loop]", text)
+        self.assertNotIn("/media/901", text)
+        self.assertNotIn("Reply comment that must not appear", text)
+
+    def test_x_article_content_key_fallback_and_saved_dom_html(self):
+        blocks = [
+            ["a1", "header-two", "Intro"],
+            ["a2", "unstyled", "First paragraph."],
+            ["a3", "atomic", " "],
+            ["a4", "blockquote", "Key point."],
+        ]
+        ssr = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:description" content="Fallback Article">'
+            "</head><body><script>"
+            "articleDocument:$R[1]={contentKey:"
+            + json.dumps(json.dumps(blocks))
+            + ",highlights:$R[2]={}},"
+            'metadata:$R[3]={authorName:"Author",focalTweetId:"999",hasArticle:!0,'
+            'headMetadata:{author:{screenName:"handle"},bodyText:"https://t.co/xyz"}}'
+            "</script></body></html>"
+        )
+        from x_source import parse_x_html
+
+        m = parse_x_html(ssr, "https://x.com/handle/status/999")
+        self.assertEqual((m.kind, m.title, m.details["images_listed"]), ("x_article", "Fallback Article", 1))
+        self.assertIn("## Intro", m.text)
+        self.assertIn("[Image 1]", m.text)
+        self.assertIn("> Key point.", m.text)
+
+        dom_html = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:description" content="Saved DOM">'
+            "</head><body>"
+            '<nav>X navigation noise</nav>'
+            '<div data-testid="twitterArticleReadView">'
+            '<h2>Heading</h2><p>Saved body <a href="https://example.org/p">paper</a>.</p>'
+            "</div>"
+            '<article><p>Reply noise after article</p></article>'
+            "</body></html>"
+        )
+        saved = self.root / "x_saved.html"
+        saved.write_text(dom_html, encoding="utf-8")
+        imported = intake.intake(self.root, "https://x.com/handle/status/888?s=20", str(saved))
+        self.assertEqual((imported["status"], imported["source_type"], imported["evidence"]), ("ready", "x", "x_article"))
+        body = (self.root / imported["material"]).read_text(encoding="utf-8")
+        self.assertIn("[paper](https://example.org/p)", body)
+        self.assertNotIn("Reply noise", body)
+
+    def test_x_url_canonicalization_deduplicates_tracking_params_and_ignores_replies(self):
+        ssr = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:description" content="Cached X">'
+            "</head><body><script>"
+            'articleDocument:$R[1]={contentKey:"[[\\"k1\\",\\"unstyled\\",\\"Body line.\\"]]"},'
+            'metadata:$R[2]={authorName:"Allen",focalTweetId:"123",hasArticle:!0,'
+            'headMetadata:{author:{screenName:"allen"},bodyText:"https://t.co/abc"}}'
+            "</script></body></html>"
+        ).encode("utf-8")
+        first_url = "https://x.com/allen/status/123?a=tracking&s=20"
+        second_url = "https://twitter.com/allen/status/123?s=46#fragment"
+        with patch.object(intake, "fetch", return_value=(ssr, "https://x.com/allen/status/123", "text/html", "utf-8")) as get:
+            first = intake.intake(self.root, first_url)
+        get.assert_called_once_with("https://x.com/allen/status/123")
+        with patch.object(intake, "online", side_effect=AssertionError("should reuse canonical cache")):
+            second = intake.intake(self.root, second_url)
+        self.assertEqual(first["source"], "https://x.com/allen/status/123")
+        self.assertTrue(second["cached"])
+
+        replies_only = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:title" content="Allen on X">'
+            "</head><body>"
+            "<article><p>@replyer Only a reply comment here.</p></article>"
+            "</body></html>"
+        ).encode("utf-8")
+        with patch.object(intake, "fetch", return_value=(replies_only, "https://x.com/allen/status/456", "text/html", "utf-8")):
+            with self.assertRaises(ReadError):
+                intake.intake(self.root, "https://x.com/allen/status/456")
+
+    def test_x_focal_post_extracts_main_post_without_replies(self):
+        relay = {
+            "data": {
+                "threaded_conversation_with_injections_v2": {
+                    "instructions": [{
+                        "entries": [{
+                            "content": {
+                                "content": {
+                                    "tweet_results": {
+                                        "rest_id": "777",
+                                        "result": {
+                                            "__typename": "Tweet",
+                                            "rest_id": "777",
+                                            "core": {"user_results": {"result": {"core": {"name": "Sam", "screen_name": "sam_ai"}}}},
+                                            "note_tweet": {
+                                                "note_tweet_results": {
+                                                    "result": {
+                                                        "text": "Long note post with link https://t.co/xyz",
+                                                        "entity_set": {"urls": [{"url": "https://t.co/xyz", "expanded_url": "https://arxiv.org/abs/2501.00001"}]},
+                                                    }
+                                                }
+                                            },
+                                        },
+                                    }
+                                }
+                            }
+                        }]
+                    }]
+                }
+            }
+        }
+        post_html = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:title" content="Sam on X: &quot;Long note post&quot; / X">'
+            "</head><body><script>"
+            'metadata:$R[1]={authorName:"Sam",focalTweetId:"777",hasArticle:!1,'
+            'headMetadata:{author:{screenName:"sam_ai"},bodyText:"Short fallback"}},'
+            "result:$R[2]={kind:\"Result.Ok\",value:" + json.dumps(json.dumps(relay)) + "}"
+            "</script><article><p>Unrelated reply text</p></article></body></html>"
+        ).encode("utf-8")
+        with patch.object(intake, "fetch", return_value=(post_html, "https://x.com/sam_ai/status/777", "text/html", "utf-8")):
+            res = intake.intake(self.root, "https://x.com/sam_ai/status/777?s=20")
+        self.assertEqual((res["status"], res["source_type"], res["evidence"]), ("ready", "x", "x_post"))
+        body = (self.root / res["material"]).read_text(encoding="utf-8")
+        self.assertIn("https://arxiv.org/abs/2501.00001", body)
+        self.assertNotIn("Unrelated reply text", body)
+
+        stub_article_html = (
+            "<html><head>"
+            '<meta property="og:site_name" content="X (formerly Twitter)">'
+            '<meta property="og:type" content="article">'
+            "</head><body><script>"
+            'metadata:$R[1]={authorName:"Sam",focalTweetId:"778",hasArticle:!0,'
+            'headMetadata:{author:{screenName:"sam_ai"},bodyText:"https://t.co/onlystub"}}'
+            "</script></body></html>"
+        ).encode("utf-8")
+        with patch.object(intake, "fetch", return_value=(stub_article_html, "https://x.com/sam_ai/status/778", "text/html", "utf-8")):
+            with self.assertRaises(ReadError):
+                intake.intake(self.root, "https://x.com/sam_ai/status/778")
+
+    def test_proxy_policy_403_maps_to_needs_network_while_remote_403_stays_needs_material(self):
+        policy_headers = Message()
+        policy_headers["Content-Type"] = "text/plain; charset=utf-8"
+        policy_err = HTTPError(
+            "https://x.com/allen/status/1",
+            403,
+            "Forbidden",
+            policy_headers,
+            BytesIO(b"Request to GET /allen/status/1 on x.com not allowed by policy"),
+        )
+        remote_headers = Message()
+        remote_headers["Content-Type"] = "text/html; charset=utf-8"
+        remote_err = HTTPError(
+            "https://example.org/private",
+            403,
+            "Forbidden",
+            remote_headers,
+            BytesIO(b"<html><body><h1>Access Denied by Origin Server</h1>" + b"x" * 600 + b"</body></html>"),
+        )
+        try:
+            with patch("intake.build_opener") as opener_cls:
+                opener_cls.return_value.open.side_effect = policy_err
+                with self.assertRaises(intake.NetworkUnavailable):
+                    intake.fetch("https://x.com/allen/status/1")
+                opener_cls.return_value.open.side_effect = remote_err
+                with self.assertRaises(HTTPError):
+                    intake.fetch("https://example.org/private")
+        finally:
+            policy_err.close()
+            remote_err.close()
