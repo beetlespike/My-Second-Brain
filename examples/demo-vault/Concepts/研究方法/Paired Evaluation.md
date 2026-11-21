@@ -18,7 +18,7 @@ stage: working
 
 $$\Delta=\frac1N\sum_{i=1}^{N}d_i.$$
 
-这是[[Concepts/数理基础/Sample Mean|样本均值]]的一种应用，平均的对象变成了每道题的得分差。[配对观测与题内差值](https://www.itl.nist.gov/div898/handbook/prc/section3/prc311.htm)
+这是[样本均值](../数理基础/Sample%20Mean.md)的一种应用，平均的对象变成了每道题的得分差。[配对观测与题内差值](https://www.itl.nist.gov/div898/handbook/prc/section3/prc311.htm)
 
 ## 十道题可以看出什么
 
@@ -37,12 +37,12 @@ A 共通过 6 题，B 共通过 7 题。平均差异为 $(3-2)/10=0.10$，也就
 
 ## 平均分差有多稳定
 
-若题目可视为独立抽样，得分差具有相同分布且方差有限，就可用[[Concepts/数理基础/Standard Error|标准误]]估计均值的波动。配对的作用可以从下面的方差关系理解：
+若题目可视为独立抽样，得分差具有相同分布且方差有限，就可用[标准误](../数理基础/Standard%20Error.md)估计均值的波动。配对的作用可以从下面的方差关系理解：
 
 $$\operatorname{Var}(S^B-S^A)=\operatorname{Var}(S^B)+\operatorname{Var}(S^A)-2\operatorname{Cov}(S^A,S^B).$$
 
-同一道题对两边的共同影响可以在差值中抵消。若多道题来自同一个原始问题，或每题反复采样，不能把所有结果都当成独立题；可继续看[[待学概念/数理基础/Correlated Sampling|相关抽样]]。
+同一道题对两边的共同影响可以在差值中抵消。若多道题来自同一个原始问题，或每题反复采样，不能把所有结果都当成独立题；可继续看[相关抽样](../../待学概念/数理基础/Correlated%20Sampling.md)。
 
-[[Concepts/研究方法/Ablation Studies|消融实验]]决定比较哪些设置，配对评测则保留这些设置在同一输入上的对应关系。
+[消融实验](Ablation%20Studies.md)决定比较哪些设置，配对评测则保留这些设置在同一输入上的对应关系。
 
-阅读路径：[[MOCs/研究与实验|研究与实验]]。
+阅读路径：[研究与实验](../../MOCs/研究与实验.md)。

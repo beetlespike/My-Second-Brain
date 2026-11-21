@@ -33,9 +33,9 @@ stage: working
 
 预切分边界也会影响哪些片段可以合并。例子把空格单独分段；另一套规则可能允许前导空格与后面的词合并。训练与使用时须保持配套规则。
 
-初始字节来自[[Concepts/计算机基础/UTF-8 Encoding|UTF-8变长编码]]。token 边界可以落在字符内部，生成之后需要按[[Concepts/计算机基础/Reversible Decoding|可逆解码]]的顺序恢复原文。
+初始字节来自[UTF-8变长编码](UTF-8%20Encoding.md)。token 边界可以落在字符内部，生成之后需要按[可逆解码](Reversible%20Decoding.md)的顺序恢复原文。
 
-阅读路径：[[MOCs/文本编码与分词|文本编码与分词]]。
+阅读路径：[文本编码与分词](../../MOCs/文本编码与分词.md)。
 
 ## Byte-Level BPE
 

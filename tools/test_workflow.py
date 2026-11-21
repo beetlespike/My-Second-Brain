@@ -68,7 +68,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(review.catalog(dest)[0], [])
         self.assertTrue((dest / 'Prompts/整理材料.md').is_file())
         self.assertTrue((dest / 'Study-Queue').is_dir())
-        self.assertTrue((dest / '待学概念').is_dir())
+        self.assertFalse((dest / '待学概念').exists())
         self.assertEqual((dest / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
         self.assert_vault_navigation(dest)
         self.assertEqual({p.name for p in (dest / 'MOCs').glob('*.md')}, {'Knowledge-Index.md', '知识库入口.md'})
@@ -266,6 +266,8 @@ class WorkflowTests(unittest.TestCase):
             source = EXAMPLE if EXAMPLE.is_dir() else ROOT
             self.assertEqual((dest / name).read_bytes(), (source / name).read_bytes())
         self.assertEqual(list((dest / 'Concepts').rglob('*.md')), [])
+        self.assertTrue((dest / 'Study-Queue').is_dir())
+        self.assertFalse((dest / '待学概念').exists())
         self.assertEqual(review.catalog(dest), ([], [], []))
         self.assertFalse((dest / '.flashcards/local').exists())
         self.assert_vault_navigation(dest)

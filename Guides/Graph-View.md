@@ -13,4 +13,4 @@ From the downloaded repository, open `examples/demo-vault/` as an Obsidian vault
 
 For the colors shown on the homepage, close the example vault window. Back up any existing graph settings. Inside that vault, copy `assets/demo/obsidian-graph.json` to `.obsidian/graph.json` and `assets/demo/obsidian-graph.css` to `.obsidian/snippets/`. Reopen the vault, choose dark appearance and enable the snippet. Blue-gray nodes are studied concepts. Pale gold marks suggestions to explore. Open a node to read why it connects to its neighbors.
 
-Append ` OR path:MOCs` to the full filter to include the topic maps. Obsidian lays out the nodes afresh when you open the graph. [Obsidian graph view help](https://obsidian.md/help/plugins/graph)
+Append ` OR path:MOCs` to the full filter to include the topic maps. In a new vault using `Study-Queue/`, replace `path:待学概念` with `path:Study-Queue`. Obsidian lays out the nodes afresh when you open the graph. [Obsidian graph view help](https://obsidian.md/help/plugins/graph)

@@ -12,9 +12,11 @@ import sys
 from source_text import Material, NetworkUnavailable, ReadError, caption_material, stamp
 
 
-def shared_runtime():
+def shared_runtimes():
+    if os.environ.get("VIDEO_NOTE_CACHE_DIR"):
+        return (Path(os.environ["VIDEO_NOTE_CACHE_DIR"]).expanduser(),)
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    return Path(os.environ.get("VIDEO_NOTE_CACHE_DIR") or cache / "codex/video-note").expanduser()
+    return (cache / "my-second-brain/video-note", cache / "codex/video-note")
 
 
 def runtime_bin(root):
@@ -29,7 +31,11 @@ def available_model():
         os.environ.get("HF_HOME")
         or Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "huggingface"
     )
-    for hub in (Path(os.environ.get("HF_HUB_CACHE") or hf_home / "hub"), shared_runtime() / "hf/hub"):
+    hubs = [
+        Path(os.environ.get("HF_HUB_CACHE") or hf_home / "hub"),
+        *(runtime / "hf/hub" for runtime in shared_runtimes()),
+    ]
+    for hub in hubs:
         snapshots = hub / "models--Systran--faster-whisper-small/snapshots"
         for model in sorted(snapshots.glob("*")):
             if all((model / n).is_file() for n in ("model.bin", "config.json", "tokenizer.json")):
@@ -44,7 +50,7 @@ def asr_python():
     candidates = [
         os.environ.get("MSB_VIDEO_PYTHON"),
         runtime_bin(Path(__file__).resolve().parents[1] / ".venv") / name,
-        runtime_bin(shared_runtime() / "venv") / name,
+        *(runtime_bin(runtime / "venv") / name for runtime in shared_runtimes()),
     ]
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
@@ -67,12 +73,13 @@ def yt_dlp():
     exe = shutil.which(name)
     if not exe and name == "yt-dlp":
         binary = "yt-dlp.exe" if os.name == "nt" else "yt-dlp"
-        for folder in (
+        folders = [
             Path(os.environ.get("MSB_VIDEO_PYTHON") or sys.executable).expanduser().parent,
             Path(sys.executable).parent,
             runtime_bin(Path(__file__).resolve().parents[1] / ".venv"),
-            runtime_bin(shared_runtime() / "venv"),
-        ):
+            *(runtime_bin(runtime / "venv") for runtime in shared_runtimes()),
+        ]
+        for folder in folders:
             exe = shutil.which(str(folder / binary))
             if exe:
                 break

@@ -21,7 +21,7 @@ D_{\mathrm{KL}}(p\Vert q)
 =H(p,q)-H(p).
 $$
 
-前一页[[Concepts/信息论/Cross-Entropy|交叉熵]]的例子中，$p=(0.75,0.25)$、$q=(0.5,0.5)$，所以 KL 约为 $1-0.811=0.189$ bit。[相对熵的定义](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.entropy.html)
+前一页[交叉熵](Cross-Entropy.md)的例子中，$p=(0.75,0.25)$、$q=(0.5,0.5)$，所以 KL 约为 $1-0.811=0.189$ bit。[相对熵的定义](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.entropy.html)
 
 ## 为什么不会是负数
 
@@ -40,6 +40,6 @@ $$
 
 令 $p=(1,0)$、$q=(0.9,0.1)$。用自然对数时，$D_{\mathrm{KL}}(p\Vert q)=\ln(1/0.9)\approx0.1054$ nat。反过来，q 会遇到第二种结果，而 p 给它零概率，所以 $D_{\mathrm{KL}}(q\Vert p)=\infty$。
 
-KL 不具备数学距离要求的对称性。写下公式前，先明确哪一侧提供观察频率、哪一侧提供预测概率。[[Concepts/信息论/Entropy|信息熵]]与交叉熵也需要区分这两个角色。
+KL 不具备数学距离要求的对称性。写下公式前，先明确哪一侧提供观察频率、哪一侧提供预测概率。[信息熵](Entropy.md)与交叉熵也需要区分这两个角色。
 
-阅读路径：[[MOCs/信息与预测|信息与预测]]。
+阅读路径：[信息与预测](../../MOCs/信息与预测.md)。

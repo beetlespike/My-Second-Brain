@@ -104,7 +104,7 @@ def initialize(source, destination, empty=False, *, demo=False):
         if relative == Path('Today.command') and sys.platform != 'win32':
             target.chmod(target.stat().st_mode | 0o111)
     for name in note_dirs:
-        if empty or demo or name not in QUEUES or (data / name).is_dir():
+        if name not in QUEUES or (name == 'Study-Queue' if (empty or demo) else (data / name).is_dir()):
             (destination / name).mkdir(exist_ok=True)
     if empty or demo or not (destination / 'README.md').exists():
         write_starter_pages(destination, demo, populated=not (empty or demo))

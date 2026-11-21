@@ -1,4 +1,4 @@
-"""Offline regressions for the evidence handed to Codex."""
+"""Offline regressions for source intake and evidence extraction."""
 
 import codecs
 import json
@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import intake
 from source_text import Material, Page, ReadError, caption_material, pdf_material
-from video_source import tracks
+from video_source import shared_runtimes, tracks
 
 WECHAT = "https://mp.weixin.qq.com/s/fixture"
 PAPER = "https://arxiv.org/abs/2309.06180v1"
@@ -248,3 +248,15 @@ class SourceIntakeTests(unittest.TestCase):
         missing = subprocess.run([*cmd, str(self.root / "缺少.txt")], env=env, capture_output=True)
         self.assertEqual((missing.returncode, json.loads(missing.stdout.decode("cp1252"))["status"]),
                          (2, "needs_material"))
+
+    def test_shared_video_runtimes_prefer_neutral_cache_and_honor_override(self):
+        base = self.root / "cache"
+        with patch.dict(os.environ, {"XDG_CACHE_HOME": str(base)}, clear=False):
+            os.environ.pop("VIDEO_NOTE_CACHE_DIR", None)
+            self.assertEqual(
+                shared_runtimes(),
+                (base / "my-second-brain/video-note", base / "codex/video-note"),
+            )
+        override = self.root / "custom-video-cache"
+        with patch.dict(os.environ, {"VIDEO_NOTE_CACHE_DIR": str(override)}, clear=False):
+            self.assertEqual(shared_runtimes(), (override,))

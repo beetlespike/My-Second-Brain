@@ -47,7 +47,7 @@ IDs take the form `sb-fc-0001` and stay stable across revisions. `status` is `ac
 Read the source section first and verify that it supports the card, then compute its hash:
 
 ```sh
-python3 .flashcards/review.py source-hash 'Concepts/数理基础/Standard Error.md' '定义与条件'
+python3 .flashcards/review.py source-hash 'Concepts/Correlated Sampling.md' 'Duplicate-record calculation'
 ```
 
 If a source section changes, disappears, or stops having a unique heading, the card drops out of future decks until reviewed. Update the card text, source hash, and increment `version`. Hashes only detect local text changes—they do not verify scientific correctness or remote upstream edits. `audit` checks card format, source hashes, and eligibility, while modifying a registered card’s text or sources without bumping `version` is rejected when registering cards (for example during `session` or `daily --publish`).

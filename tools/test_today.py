@@ -172,6 +172,7 @@ class TodayTests(unittest.TestCase):
         self.assertIsNone(no_cards['fragment'])
         self.assertFalse((empty / 'absent.html').exists())
         note = empty / '待学概念/Bridge.md'
+        note.parent.mkdir(exist_ok=True)
         note.write_text('# Bridge\n\n## 知识卡\n\n### 正面\nQuestion\n\n### 简答\nAnswer\n', encoding='utf-8')
         yesterday = date.fromisoformat(result['date']) - timedelta(days=1)
         cmd('session', '--date', yesterday.isoformat(), '--discovery', '待学概念/Bridge.md')

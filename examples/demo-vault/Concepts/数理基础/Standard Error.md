@@ -12,7 +12,7 @@ stage: working
 
 ## 定义与条件
 
-设 X_1,...,X_n 相互独立、同分布，方差为有限的 σ²。对[[Concepts/数理基础/Sample Mean|样本均值]]，有：
+设 X_1,...,X_n 相互独立、同分布，方差为有限的 σ²。对[样本均值](Sample%20Mean.md)，有：
 
 $$\operatorname{Var}(\bar X)=\frac{1}{n^2}\operatorname{Var}\left(\sum_{i=1}^{n}X_i\right)=\frac{1}{n^2}\sum_{i=1}^{n}\sigma^2=\frac{\sigma^2}{n}.$$
 
