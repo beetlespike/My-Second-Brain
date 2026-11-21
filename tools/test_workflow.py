@@ -59,6 +59,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(all(c['eligible'] for c in cards))
         self.assertEqual(workflow.check(self.root)['errors'], [])
 
+    def test_sample_card_section_links_match_literal_headings_and_github_anchors(self):
+        for card_file in (self.root / 'Flashcards').glob('*.md'):
+            for _, url in markdown_targets(card_file):
+                link = urlsplit(url)
+                if link.scheme or not link.fragment:
+                    continue
+                with self.subTest(card=card_file.name, url=url):
+                    note = card_file.parent / unquote(link.path)
+                    text = note.read_text(encoding='utf-8')
+                    _, headings = review.markdown_structure(text)
+                    fragment = unquote(link.fragment)
+                    self.assertEqual(sum(title == fragment for _, _, title in headings), 1)
+                    self.assertIn(fragment, workflow.heading_anchors(review, text))
+
     def test_empty_start_has_guides_and_no_example_or_feedback(self):
         dest = Path(self.tmp.name) / 'empty'
         workflow.initialize(ROOT, dest, empty=True)

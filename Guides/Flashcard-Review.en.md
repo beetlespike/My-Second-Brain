@@ -4,7 +4,7 @@
 
 Cards ask you to recall an answer first, then check a concise explanation. Each card focuses on one concrete question. The short answer should stand on its own with the required symbols and conditions clearly stated; longer derivations or worked examples can live in the expandable detail section.
 
-Review cards live under `Flashcards/` and must cite sources inside your active knowledge directories. A second kind of card—a study (discovery) card—comes from a note in `Study-Queue/` (or `待学概念/` in Chinese/bilingual vaults) and introduces a missing concept connected to ideas you already know. Your learning status is governed by your own explanations, exercises, or explicit confirmation.
+Review cards live under `Flashcards/` and must cite sources inside your active knowledge directories. A second kind of card—a study (discovery) card—comes from a note in `Study-Queue/` (the bundled example and some older vaults use `待学概念/`) and introduces a missing concept connected to ideas you already know. Your learning status is governed by your own explanations, exercises, or explicit confirmation.
 
 ## One review cycle
 
@@ -20,7 +20,7 @@ The three ratings—**Again** (`1` day), **Shaky** (`3` days), and **Familiar** 
 
 ## New-concept cards
 
-To include a study note in today’s deck, add a card section to that note in `Study-Queue/` (or `待学概念/`). You can write prose in English, Chinese, or both, using English headings (`## Study Card` / `### Front` / `### Short Answer`) or Chinese headings (`## 知识卡` / `### 正面` / `### 简答`):
+To include a study note in today’s deck, save the section below as `Study-Queue/Correlated Sampling.md` in a new vault. You can write prose in English, Chinese, or both, using English headings (`## Study Card` / `### Front` / `### Short Answer`) or Chinese headings (`## 知识卡` / `### 正面` / `### 简答`):
 
 ```markdown
 ## Study Card
@@ -44,7 +44,31 @@ Each flashcard file uses `type: flashcard_set`. Separate cards with H2 (`##`) he
 
 IDs take the form `sb-fc-0001` and stay stable across revisions. `status` is `active`, `paused`, or `retired`. Each source entry stores a vault-relative `path`, an exact `heading`, and that section’s `sha256`.
 
-Read the source section first and verify that it supports the card, then compute its hash:
+The bundled example includes a note on standard error. From the downloaded repository or a full example copy, you can hash its “定义与条件” (definition and conditions) section with this command.
+
+```sh
+python3 .flashcards/review.py source-hash 'Concepts/数理基础/Standard Error.md' '定义与条件'
+```
+
+To try the card below in an empty personal vault, first save the following source note as `Concepts/Correlated Sampling.md`.
+
+```markdown
+---
+type: concept
+status: active
+---
+
+# Correlated Sampling
+
+## Duplicate-record calculation
+
+Suppose the original observations are independent and each has variance σ².
+With m observations, the sample mean has variance σ²/m. If every row appears
+three times, the sum and the count both triple. The mean stays the same on
+every draw, so its sampling variance is still σ²/m.
+```
+
+Read the section and check that it supports your card. Run this command from the personal vault to get the hash for the card’s `sha256` field.
 
 ```sh
 python3 .flashcards/review.py source-hash 'Concepts/Correlated Sampling.md' 'Duplicate-record calculation'
@@ -52,7 +76,7 @@ python3 .flashcards/review.py source-hash 'Concepts/Correlated Sampling.md' 'Dup
 
 If a source section changes, disappears, or stops having a unique heading, the card drops out of future decks until reviewed. Update the card text, source hash, and increment `version`. Hashes only detect local text changes—they do not verify scientific correctness or remote upstream edits. `audit` checks card format, source hashes, and eligibility, while modifying a registered card’s text or sources without bumping `version` is rejected when registering cards (for example during `session` or `daily --publish`).
 
-The structure looks like this in an empty vault (usually generated for you by your assistant):
+Save the card in `Flashcards/Correlated Sampling.md` with the hash you just computed. Your assistant can do both steps for you.
 
 ```markdown
 ---
@@ -68,7 +92,7 @@ status: active
 
 ### Front
 
-If each independent observation is duplicated three times, does the variance of the sample mean drop to one third?
+If each independent observation appears three times, does the variance of the sample mean drop to one third?
 
 ### Short Answer
 
@@ -80,7 +104,7 @@ $\bar X=3\sum_iY_i/(3m)=\sum_iY_i/m$. The count of independent draws is still $m
 
 ### Sources
 
-[Duplicate-record calculation](../Concepts/Correlated%20Sampling.md#duplicate-record-calculation)
+[Duplicate-record calculation](../Concepts/Correlated%20Sampling.md)
 ```
 
 Run `python3 .flashcards/review.py audit` after writing a card to inspect `total`, `eligible`, `errors`, and `needs_review`. If a newly written card shows `total: 0`, verify it lives under `Flashcards/` with `type: flashcard_set` and valid metadata. Never overwrite hashes to bypass review when a source needs checking.
