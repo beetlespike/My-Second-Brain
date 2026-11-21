@@ -8,8 +8,8 @@ status: distilled
 
 # 计时一条流式回答 · Timing a streamed answer
 
-改写对话 / reconstructed exchange · [改写对话全文 / Rewritten exchange](../assets/demo/streaming-dialogue.md)
+公开改写后的对话原文见 [streaming-dialogue](../assets/demo/streaming-dialogue.md)（保留客户端计时口径，数字已为公开示例重设）。
 
-这组数字是为公开示例重写的。对话贡献的是一个区分：等开头、等后续 token 的平均时间和中间一次停顿，分别要看什么记录。
+这段排查其实就钉死了一件容易看走眼的事：看板报 20 ms 平均耗时不等于流式输出顺滑。在例子里，第 1 个 token 等了 120 ms（[TTFT](../Concepts/推理系统/TTFT.md)），后 4 个总共耗时 80 ms，算出平均每个 20 ms（[TPOT](../Concepts/推理系统/TPOT.md)）——但如果实际间隔是 `5、5、65、5 ms`，平均数照样 20 ms，而那一下 65 ms 的卡顿只有留着逐 token 到达时间戳才看得见。另外，如果客户端收到的是按块合并发送的响应，还得标明量的是分块间隔。
 
-A client receives its first token at 120 ms, then four more by 200 ms. [TTFT](../Concepts/推理系统/TTFT.md) is 120 ms and [TPOT](../Concepts/推理系统/TPOT.md) is 20 ms. Those two times leave open the spacing of the four later arrivals. The exchange separates a stall someone can feel from an average a dashboard might report.
+A trace with token 1 at 120 ms ([TTFT](../Concepts/推理系统/TTFT.md)) and token 5 at 200 ms yields an 80 ms window across four tokens, so average [TPOT](../Concepts/推理系统/TPOT.md) sits at 20 ms either way—whether arrivals are steady `20 ms` ticks or `5, 5, 65, 5 ms` hiding a 65 ms stall. Per-token arrival timestamps catch the hitch; if chunks are batched before delivery, record that gap granularity explicitly.

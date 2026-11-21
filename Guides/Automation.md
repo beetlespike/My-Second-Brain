@@ -2,53 +2,47 @@
 
 [简体中文](自动整理与维护.md)
 
-I set up a Codex automation to read the Codex and ChatGPT study conversations I choose. Codex uses the parts I’ve studied to update concept notes, build topic maps and suggest ideas that connect to what I already know. Source intake, daily cards, and public repository maintenance can run as separate tasks.
+In my personal workflow, I run a Codex automation to read selected study conversations from Codex and ChatGPT and turn what I studied into concept updates, topic maps, and candidate study notes. Any local AI assistant paired with a scheduler (or your OS scheduler) can drive the same core vault workflow for browser cards and local files, while chat-history sweeping depends on whether your client exposes history.
 
 ## Daily knowledge cards
 
-Each vault has a private address. Open Today’s Cards once on the computer that holds the vault and bookmark it. Review, rate or comment whenever you like. Ratings count toward the review schedule as soon as you save them. Written comments appear as pending in **我的留言与回复** (“My comments and replies”). Your assistant handles them the next time it prepares cards. You can ask it to run sooner.
+Each vault has a fixed private local browser address (`Today.command` / `Today.cmd`). Open Today’s Cards once on the computer holding the vault and bookmark it. Review, rate, or leave questions whenever you like. Clicking **Save** writes to your vault and updates review intervals immediately. Written comments stay under **My comments and replies** until your assistant resolves them on its next card run (or sooner if you ask it directly).
 
-Choose an AI assistant that can read and write your vault and run local commands. Schedule the task below for a time that suits you. If the assistant has no scheduler, the computer’s scheduler can launch it. Run the task once during setup so the bookmark starts showing decks published by your assistant.
+Any AI assistant that can read and write your vault and run local commands can run this daily task (or be triggered by your system scheduler). Run it once during setup so the fixed bookmark serves published decks:
 
-> Work in this vault using Prompts/每日复习.md. Start with outstanding comments. Answer the question, revise the card or add a related one, then leave me the result. Use what I’ve studied since to update review cards. When a new concept connects ideas in the vault, make a study card. Publish today’s cards at my private address.
+> Work in this vault using `Prompts/每日复习.md`. Start with outstanding comments. Answer the question, revise the card or add a related one, then leave me the result. Use what I’ve studied since to update review cards. When a new concept connects ideas in the vault, make a study card. Publish today’s cards at my private address.
 
-The bookmark shows the previous deck until a new one is ready. If another local program takes the address, the launcher asks you to retry once it is free and keeps your bookmark. The assistant can retrieve the address with `today --no-open`. For browser-only practice, `daily --on-demand` switches back to selecting cards when you open the page. New vaults use the computer’s local date. Set `timezone` in `.secondbrain.json` if you want a fixed time zone while travelling.
+The bookmark keeps showing the previous deck until a new one is ready. If another local process holds the port, the launcher asks you to retry once free while preserving the same address. Your assistant can check the URL anytime with `today --no-open`. For on-demand local selection without an assistant publish, `daily --on-demand` switches back to picking cards when opened. Vaults use the machine’s local date unless `timezone` is set in `.secondbrain.json`.
 
-I run the same task in a Codex automation and also receive interactive cards in the chat. Add `--chat-output <path>` when publishing to use both places. **提交到聊天保存** (“Send to chat to save”) and the browser’s **保存反馈** (“Save feedback”) write to the same records. [Card format](Flashcard-Review.md#新概念卡)
+Open browser cards on the computer that holds the vault. If your host client also supports embedded interactive card widgets in chat (as Codex desktop does), adding `--chat-output <path>` lets you mirror cards into chat, and **Send to chat to save** writes to the same SQLite records as browser **Save feedback**. [Card format](Flashcard-Review.en.md#new-concept-cards)
 
 ## Check what your environment supports
 
-My current desktop environment gives the AI assistant tools to list and read conversation history, so it can process authorized Codex and ChatGPT conversations incrementally. Those tools belong to the host application. This repository does not bundle a chat collector or guarantee the same interfaces in other clients.
+My personal setup uses a desktop client that exposes conversation lists and history tools inside its automation sandbox, allowing incremental sweeps of authorized Codex and ChatGPT chats. That history connector comes from the host application—this repository does not bundle a chat scraper and does not assume every client provides one.
 
-Start with a small check:
+Start with a small capability check in your own tool:
 
 > Inspect only the learning conversation I select. Which messages and attachments can you read? Can you retrieve earlier messages and write to this knowledge folder? Report the actual coverage, then suggest a recurring workflow.
 
 | Available capabilities | A possible setup |
 | --- | --- |
-| Authorized history access and local file access | Schedule a pass over the parts you studied in selected conversations |
-| Local file access only | Process exports or excerpts you place in a chosen folder |
-| Web or mobile chat only | Generate notes for you to save; direct updates to a local vault require an additional file connection |
-| Scheduling without history access | Review the network or organize material you've studied and supplied |
+| Authorized history access and local file access | Schedule an incremental pass over the parts you studied in selected conversations |
+| Local file access only | Process exports or excerpts you drop into a chosen folder inside the vault |
+| Web or mobile chat only | Generate candidate notes for manual copy-over; direct vault writes need local file access |
+| Scheduling without history access | Review existing notes/cards or process sources you studied and supplied manually |
 
-Local scheduled work generally needs the computer on, the app running, and the folder accessible. Web and desktop tasks may have different tools; check the [official scheduling guide](https://developers.openai.com/codex/app/automations/). ChatGPT [data export](https://help.openai.com/en/articles/7260999-exporting-your-chatgpt-history-and-data) is another possible source, subject to account and workspace availability. You need to refresh those exports yourself.
+Desktop scheduled tasks accessing local vaults generally require the machine awake, the host running, and folder permissions active; check your client’s automation docs (for example, Codex’s [automations guide](https://developers.openai.com/codex/app/automations/)). Manually refreshed exports (such as a ChatGPT [data export](https://help.openai.com/en/articles/7260999-exporting-your-chatgpt-history-and-data)) also work well as regular local input.
 
 ## A prompt to adapt
 
-Try a manual run before choosing a schedule. Every few days is one starting point; adjust for the amount of material and cost.
+Try a manual run before picking a cadence—every few days is a reasonable baseline, scaled by how much you study.
 
-> Resume where you left off and follow Prompts/整理材料.md for the parts I studied in the selected conversations or exports. Use my follow-up questions, explanations, exercises, or confirmation to tell what I covered. Keep sources and preserve my edits. Use Prompts/回顾与补学.md to find a missing concept that can connect several existing nodes. Write to the designated vault, check links and card sources, and track what you read and what still needs checking in .local/ alongside your source cache.
+> Resume where you left off and follow `Prompts/整理材料.md` for the parts I studied in the selected conversations or exports. Use my follow-up questions, explanations, exercises, or confirmation to tell what I covered. Keep sources and preserve my edits. Use `Prompts/回顾与补学.md` to find a missing concept that can connect several existing nodes. Write to the designated vault, check links and card sources, and track what you read and what still needs checking in `.local/` alongside your source cache.
 
-Specify the allowed conversations, projects, or files; the destination folder; the schedule; and the cost limits. The task should read actual messages. Titles and summaries can identify material to review but cannot substitute for it. A short `.local/maintenance.md` can record the position reached in each source, missing material, and the resulting notes.
+Always constrain the allowed conversations/folders, destination vault, cadence, and budget. Tasks should read real messages rather than titles or summaries. Keeping `.local/maintenance.md` lets each run pick up cleanly from the previous cursor.
 
-After a few runs, read a concept note and see whether it explains something you worked out and has a meaningful link to another subject. Pick a study node and see whether each of its links to the existing concepts makes sense.
+After a few runs, spot-check one updated concept note and one suggested study note to confirm every link rests on a real explanation rather than vague similarity.
 
 ## Maintaining a public repository
 
-I also run a task that checks public feedback on My Second Brain, reproduces problems, and compares the guides with the tools. Related fixes are prepared and verified locally before a purposeful update is committed. I decide changes to the project's direction, license, and main writing style.
-
-If you publish your own template, you can adapt this:
-
-> Periodically check the chosen repository's issues, PRs, and existing check results. Prioritize reproducible bugs and first-use problems. Prepare related changes locally and verify them together, then commit and publish within my authorization. Propose major design, compatibility, licensing, or cost changes for my decision. Preserve concurrent edits, keep test data in temporary folders, and leave private knowledge bases outside the task's scope.
-
-The repository provides these approaches and prompts. Configure scheduled tasks in your own environment. Downloading the template does not create background tasks, read other accounts, or enable automatic publishing.
+If you publish your own public fork or template, separate repository maintenance (issues, PRs, guide-vs-tool consistency checks in temporary directories) from any private learning vaults, keep tests isolated, and review major compatibility, license, or style changes yourself. Downloading this template does not install background tasks, read external accounts, or push anything automatically.

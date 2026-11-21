@@ -9,9 +9,9 @@ stage: working
 
 # Prefill-Decode Disaggregation
 
-将两个阶段交给不同 GPU 池，排队和配卡可以分别调整。解码池要接到提示词对应的 KV 才能继续，传输和两边的排队时间一起决定拆分是否合算。
+预填充吃算力、延迟容易打断别人，解码吃显存带宽、怕排队；硬塞在一张卡或同一个 GPU 池里就互相掐架。把两步拆到各自独立扩缩容的 GPU 池后，批内抢占是消掉了，但也多出来一笔硬开销：提示词算出的 KV 缓存要交给解码池。两组 GPU 在同一台机器时可以走机内互连，分在不同机器时才需要跨机。传输延迟和接收端可能新堆起来的队列，合起来决定这场分家划不划算。
 
-Place the two stages of [Prefill and Decode](../../Concepts/推理系统/Prefill%20and%20Decode.md) on different GPU groups. Each pool can schedule and scale its own work, removing the shared GPU contention described by [Prefill-Decode Interference](Prefill-Decode%20Interference.md). The receiving worker needs the prompt’s [KV Cache](../../Concepts/推理系统/KV%20Cache.md) before it can continue generation. [Interconnect Bandwidth](../../Concepts/推理系统/Interconnect%20Bandwidth.md) bounds the transfer time, and imbalance between pools can move the queue to the handoff.
+Separating [Prefill and Decode](../../Concepts/推理系统/Prefill%20and%20Decode.md) onto separate GPU pools removes [Prefill-Decode Interference](Prefill-Decode%20Interference.md) and lets each pool scale its own bottleneck. The bill shifts to [KV Cache](../../Concepts/推理系统/KV%20Cache.md) shipping: every request must send its prompt cache across [Interconnect Bandwidth](../../Concepts/推理系统/Interconnect%20Bandwidth.md) before decoding starts, so net gain depends on saved stalls minus transfer time and handoff queuing.
 
 [DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving](../../Papers/DistServe.md)
 
@@ -19,12 +19,12 @@ Place the two stages of [Prefill and Decode](../../Concepts/推理系统/Prefill
 
 ### 正面
 
-A handoff moves 2 GB over a 40 GB/s link and saves 30 ms of waiting. With no overlap or other overhead, does it pay off? What if the link runs at 80 GB/s?
+拆池本来能帮一条请求省下 30 ms 的等待，但要把 2 GB KV 缓存搬过去。如果卡间有效链路只有 40 GB/s（不考虑传输重叠与其他开销），这笔分家账划算吗？链路翻倍到 80 GB/s 呢？
 
-拆分能省 30 ms 的等待。2 GB 的 KV 走 40 GB/s 的链路，传输没有重叠，忽略其他开销。这笔账划算吗？换成 80 GB/s 呢？
+Splitting prefill and decode saves 30 ms of queuing, while moving 2 GB of KV cache to the decode pool. Ignoring overlap and extra overhead, does the split pay off on a 40 GB/s link—or on an 80 GB/s link?
 
 ### 简答
 
-At 40 GB/s the transfer takes 50 ms, so splitting costs 20 ms more than it saves. At 80 GB/s it takes 25 ms, leaving a net saving of 5 ms. Both estimates use the effective transfer rate and the same 30 ms of waiting saved.
+按有效带宽直算：40 GB/s 链路光传输就要花 `2 GB / (40 GB/s) = 0.05 s = 50 ms`，比省下的 30 ms 还倒亏 20 ms；换到 80 GB/s 后传输降到 25 ms，扣除才开始净省 5 ms。
 
-按实际可用带宽计算，40 GB/s 时传输用 50 ms，比省下的等待多 20 ms。换成 80 GB/s，传输只用 25 ms，拆分就能净省 5 ms。两次比较都假定能省下同样的 30 ms 等待。
+At 40 GB/s, shipping 2 GB takes `2 GB / (40 GB/s) = 0.05 s = 50 ms`—20 ms slower than staying put, since only 30 ms was saved. At 80 GB/s, transfer drops to 25 ms, flipping the split into a net 5 ms win under those same assumptions.

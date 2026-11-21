@@ -13,16 +13,24 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 NOTE_DIRS = ('Papers', 'Articles', 'Videos', 'Chats', 'Concepts', 'MOCs', '待学概念', 'Flashcards')
 TYPES = dict(Papers='paper', Articles='article', Videos='video', Chats='chat', Concepts='concept', MOCs='moc', Flashcards='flashcard_set')
-SUPPORT = ('README.md', 'README.en.md', 'LICENSE', 'AGENTS.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards', 'Today.command', 'Today.cmd')
+HOMEPAGES = ('README.md', 'README.zh.md')
+SUPPORT = ('LICENSE', 'AGENTS.md', 'CLAUDE.md', 'THIRD-PARTY.md', '.gitignore', '.secondbrain.json', 'Guides', 'Prompts', 'tools', '.flashcards', 'Today.command', 'Today.cmd')
+PORTAL_PAGES = set(HOMEPAGES) | {
+    'MOCs/Knowledge-Index.md', 'MOCs/知识库入口.md',
+    'Guides/First-Run.md', 'Guides/第一次使用.md', 'Guides/Flashcard-Review.en.md', 'Guides/Flashcard-Review.md',
+    'Guides/Automation.md', 'Guides/自动整理与维护.md', 'Guides/Network-Notes.md',
+}
 DEMO_SOURCES = ('assets/demo/serving-sources.md', 'assets/demo/streaming-dialogue.md',
                 'assets/demo/first-token.vtt', 'assets/demo/retrieval.md')
 
 
 def files_under(path):
     """只遍历实体文件，跳过运行状态、环境与版本历史。"""
-    if path.is_file() and not path.is_symlink():
+    skip = {'local', '.local', '.git', '.obsidian', '__pycache__', '.venv', '.cursor', 'AGENTS.override.md', 'GEMINI.md'}
+    if path.is_symlink() or path.name in {'GEMINI.md', 'AGENTS.override.md', '.cursor'}:
+        return []
+    if path.is_file():
         return [path]
-    skip = {'local', '.local', '.git', '.obsidian', '__pycache__', '.venv'}
     return [p for p in path.rglob('*') if p.is_file() and not p.is_symlink()
             and not skip.intersection(p.relative_to(path).parts)
             and not any(q.is_symlink() for q in p.parents if q != path.parent)]
@@ -33,6 +41,12 @@ def review_module(root):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def homepages(root):
+    if not (root / 'README.zh.md').is_file() and (root / 'README.en.md').is_file():
+        return ('README.md', 'README.en.md')
+    return HOMEPAGES
 
 
 def initialize(source, destination, empty=False, *, demo=False):
@@ -53,50 +67,57 @@ def initialize(source, destination, empty=False, *, demo=False):
                 raise ValueError(f'缺少示例原文 {name}，请从完整模板运行 init --demo')
         extra = DEMO_SOURCES
     elif not empty:
-        extra = note_dirs + ('assets',)
+        extra = homepages(source) + note_dirs + ('assets',)
     selected = [(p, p.relative_to(source)) for name in SUPPORT + extra for p in files_under(source / name)]
     destination.mkdir(parents=True, exist_ok=True)
-    try:
-        for p, relative in selected:
-            target = destination / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(p, target)
-            if relative == Path('Today.command') and sys.platform != 'win32':
-                target.chmod(target.stat().st_mode | 0o111)
-        if empty or demo:
-            for name in note_dirs:
-                (destination / name).mkdir(exist_ok=True)
-            (destination / 'MOCs/知识库入口.md').write_text(
-                '---\ntype: moc\nstatus: active\n---\n\n# 知识库入口\n\n'
-                '几个概念能一起回答一个问题时，Codex 会把它们编成主题地图，列在这里。你可以从地图打开各个概念，同一个概念也可以出现在不同地图里。\n\n'
-                'Codex builds topic maps around questions your existing concepts help answer and lists the maps here. Open a map to read its linked notes.\n',
-                encoding='utf-8')
-            demo_zh = ('[推理服务的四份材料](assets/demo/serving-sources.md)收录真实视频、文章和论文的入口，以及一段公开改写的对话。'
-                       '可从[第一次使用](Guides/第一次使用.md)开始。\n\n') if demo else ''
-            demo_en = ('[Four sources on LLM serving](assets/demo/serving-sources.md) links to a real video, article and paper, alongside a conversation rewritten for public use. '
-                       'Start with the [first-use guide](Guides/First-Run.md).\n\n') if demo else ''
-            (destination / 'README.md').write_text(
-                '# My Second Brain\n\n简体中文 | [English](README.en.md) · [MIT](LICENSE)\n\n'
-                f'{demo_zh}'
-                '把学过的材料链接交给能读写这个目录的 AI 助手。它读取可用正文，把不同概念各写成一页，连到以前学过的内容，再把能一起回答一个问题的概念编成主题地图（MOC）。你可以从[知识库入口](MOCs/知识库入口.md)打开地图。\n\n'
-                '推荐用 Obsidian 阅读、Codex 整理。让助手按[整理提示](Prompts/整理材料.md)帮你把学过的概念连起来。还可以请它找出尚未收录、能连接多个已有节点的概念，先标为待学。[开始使用](Guides/第一次使用.md) · [每日知识卡](Guides/自动整理与维护.md)\n\n'
-                '每个库都有固定的私人卡片网址。让助手打开，或双击 `Today.command`（macOS）、`Today.cmd`（Windows），收藏它。你随时可以评分、留言。每日助手先答复或修卡，再发下一组，结果在「我的留言与回复」里。\n\n'
-                '[读取工具](Guides/来源与工具.md) · [本地命令](Guides/工具与扩展.md) · [定期整理](Guides/自动整理与维护.md)\n\n'
-                '模板采用 [MIT 许可证](LICENSE)。第三方组件和导入的材料适用各自的许可。\n',
-                encoding='utf-8')
-            (destination / 'README.en.md').write_text(
-                '# My Second Brain\n\n[简体中文](README.md) | English · [MIT](LICENSE)\n\n'
-                f'{demo_en}'
-                'Give the link to a source you’ve studied to an AI assistant that can read and write this folder. It reads the available material, gives each concept a note, links it to what you’ve already studied and builds a map of content (MOC) when several concepts help answer one question. Open the map from the [knowledge index](MOCs/知识库入口.md).\n\n'
-                'Obsidian and Codex are one recommended pairing. Give your assistant the [intake prompt](Prompts/整理材料.md) to connect what you learned. You can also ask it to identify a missing concept with several links to existing nodes and mark it for study. [Getting started](Guides/First-Run.md) · [Daily knowledge cards](Guides/Automation.md)\n\n'
-                'Each vault has a private card address. Ask your assistant to open it, or double-click `Today.command` on macOS or `Today.cmd` on Windows and bookmark it. Rate cards or leave questions whenever you like. Your daily assistant answers or revises cards before publishing the next deck. See the results in **我的留言与回复** (“My comments and replies”).\n\n'
-                '[Reading tools](Guides/Sources-and-tools.md) · [Local commands](Guides/工具与扩展.md) · [Scheduled source intake](Guides/Automation.md)\n\n'
-                'The template uses the [MIT License](LICENSE). Third-party components and materials you import retain their own licenses.\n',
-                encoding='utf-8')
-    except Exception:
-        # 已写入的文件保留，便于核查失败原因；不会删除用户目录。
-        raise
+    for p, relative in selected:
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(p, target)
+        if relative == Path('Today.command') and sys.platform != 'win32':
+            target.chmod(target.stat().st_mode | 0o111)
+    for name in note_dirs:
+        (destination / name).mkdir(exist_ok=True)
+    if empty or demo:
+        write_starter_pages(destination, demo)
     return {'created': str(destination), 'example_notes': not (empty or demo)}
+
+
+def write_starter_pages(destination, demo):
+    demo_en = 'You can also practise with the [four sources on LLM serving](assets/demo/serving-sources.md).\n\n' if demo else ''
+    demo_zh = '想先练习一次，可以从[推理服务的四份材料](assets/demo/serving-sources.md)里选一份。\n\n' if demo else ''
+    (destination / 'README.md').write_text(
+        '# My Second Brain\n\nEnglish · [简体中文](README.zh.md)\n\n'
+        'Start with one source you have studied. Open this folder with an AI assistant that can read and write local files and run commands. '
+        'Give it the link or saved file and ask it to follow the [intake prompt](Prompts/整理材料.md). '
+        'As your notes grow, the [knowledge index](MOCs/Knowledge-Index.md) will lead you to maps of related concepts.\n\n'
+        f'{demo_en}'
+        'This vault starts with zero review cards. Once you have notes, ask your assistant to make cards from them. '
+        'Open Today’s Cards in your browser with `Today.command` on macOS, `sh Today.command` on Linux, or `Today.cmd` on Windows.\n\n'
+        'Your notes are Markdown files you can open in any editor. Ratings and comments are saved in this vault’s local database. '
+        'With a cloud assistant, what reaches the service depends on the tool, its permissions, and the material included in the conversation.\n\n'
+        '[First use](Guides/First-Run.md) · [Today’s Cards](Guides/First-Run.md#todays-cards) · [MIT license](LICENSE)\n',
+        encoding='utf-8')
+    (destination / 'README.zh.md').write_text(
+        '# My Second Brain\n\n[English](README.md) · 简体中文\n\n'
+        '从一份自己学过的材料开始。用能读写本地文件、运行命令的 AI 助手打开这个目录，把材料的链接或文件交给它，请它按[整理提示](Prompts/整理材料.md)记下你学过的概念。'
+        '相关概念多起来以后，从[知识库入口](MOCs/知识库入口.md)就能找到把它们串起来的主题地图。\n\n'
+        f'{demo_zh}'
+        '新库里有 0 张复习卡。写好笔记后，可以请助手根据笔记做卡。要在浏览器里打开今日知识卡，macOS 双击 `Today.command`，Linux 运行 `sh Today.command`，Windows 双击 `Today.cmd`。\n\n'
+        '笔记以 Markdown 文件保存在这个目录里，用任意文本编辑器都能打开。评分和留言存入本库的本地数据库。使用云端助手时，哪些材料会发送给服务商，取决于所用工具、它的权限和对话中包含的内容。\n\n'
+        '[第一次使用](Guides/第一次使用.md) · [今日知识卡](Guides/第一次使用.md#今日知识卡) · [MIT 许可](LICENSE)\n',
+        encoding='utf-8')
+    frontmatter = '---\ntype: moc\nstatus: active\n---\n\n'
+    (destination / 'MOCs/Knowledge-Index.md').write_text(
+        frontmatter + '# Knowledge Index\n\n[简体中文](知识库入口.md)\n\n'
+        'When several notes help answer the same question, link them in a topic map and add the map here. '
+        'A concept can appear in more than one map.\n\n[Home](../README.md)\n',
+        encoding='utf-8')
+    (destination / 'MOCs/知识库入口.md').write_text(
+        frontmatter + '# 知识库入口\n\n[English](Knowledge-Index.md)\n\n'
+        '当几篇笔记能一起回答一个问题时，可以把它们连成一张主题地图，再把地图列在这里。同一个概念也可以出现在几张地图里。\n\n'
+        '[首页](../README.zh.md)\n',
+        encoding='utf-8')
 
 
 def prose(text):
@@ -114,13 +135,32 @@ def fields(text):
     return {k: v.strip().strip('\"\'') for k, v in re.findall(r'^([\w_]+):[ \t]*([^\n]*)$', header, re.M)}
 
 
+def heading_anchors(module, text):
+    """列出门户文档中标题的章节链接及显式 HTML 锚点。"""
+    anchors = set()
+    _, headings = module.markdown_structure(text)
+    for _, _, title in headings:
+        base = re.sub(r'[^\w -]', '', title.lower()).replace(' ', '-')
+        anchor = base
+        suffix = 1
+        while anchor in anchors:
+            anchor = f'{base}-{suffix}'
+            suffix += 1
+        anchors.add(anchor)
+    html_anchor = r"""<[A-Za-z][^<>]*?\s(?:id|name)\s*=\s*(["'])([^"'<>]*)\1"""
+    anchors.update(match[2] for match in re.finditer(html_anchor, prose(text), re.I))
+    return anchors
+
+
 def check(root):
     root = root.resolve()
     module = review_module(root)
     cfg = module.settings(root)
     dirs = tuple(dict.fromkeys(NOTE_DIRS + tuple(cfg['source_dirs']) + ('Guides', 'Prompts', 'assets')))
     notes = [p for d in dirs for p in files_under(root / d) if p.suffix == '.md']
-    notes += [root / name for name in ('README.md', 'README.en.md', 'AGENTS.md', 'THIRD-PARTY.md') if (root / name).exists()]
+    home = homepages(root)
+    notes += [root / name for name in home + ('AGENTS.md', 'CLAUDE.md', 'THIRD-PARTY.md') if (root / name).is_file()]
+    portal = {root / name for name in PORTAL_PAGES} if (root / 'README.zh.md').is_file() else set()
     by_stem = {}
     for p in notes:
         by_stem.setdefault(p.stem, []).append(p)
@@ -168,6 +208,9 @@ def check(root):
                     module.section(hits[0].read_text(encoding='utf-8'), anchor)
                 except ValueError:
                     errors.append(f'{relative}：章节无法唯一定位 {value}')
+            elif anchor and not wiki and not anchor.startswith('^') and p in portal and hits[0] in portal:
+                if unquote(anchor) not in heading_anchors(module, hits[0].read_text(encoding='utf-8')):
+                    errors.append(f'{relative}：找不到章节 {value}')
     return {'notes_checked': len(notes), 'errors': sorted(set(errors)), 'warnings': warnings}
 
 

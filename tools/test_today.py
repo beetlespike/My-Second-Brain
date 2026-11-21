@@ -46,7 +46,7 @@ class TodayTests(unittest.TestCase):
         connection = http.client.HTTPConnection(u.hostname, u.port, timeout=4)
         try:
             if payload is None:
-                connection.request('GET', u.path)
+                connection.request('GET', u.path + ('?' + u.query if u.query else ''))
             else:
                 headers = {'Content-Type': 'application/json', 'Origin': origin or 'http://' + u.netloc}
                 connection.request('POST', u.path.rsplit('/', 1)[0] + '/feedback',
@@ -86,6 +86,21 @@ class TodayTests(unittest.TestCase):
         self.assertGreaterEqual(self.http(url, wrong_vault)[0], 400)
         self.assertEqual(self.http(url, payload, origin='https://example.org')[0], 403)
         self.assertEqual(len(self.run_cli('notes')), 1)
+
+    def test_language_switch_preserves_deck_and_feedback(self):
+        url = self.run_cli('today', '--no-open')['url']
+        deck, _ = self.deck(url + '?lang=en')
+        self.assertEqual(self.deck(url + '?lang=zh')[0], deck)
+        self.assertEqual(self.http(url, self.feedback(deck))[0], 200)
+        for lang, title in [('en', 'My comments and replies'), ('zh', '我的留言与回复')]:
+            status, page = self.http(url + '?feedback=1&lang=' + lang)
+            self.assertEqual(status, 200)
+            self.assertIn(f'<h1>{title}</h1>', page)
+            self.assertIn('下次换一个例子。', page)
+            self.assertIn(f'href="today?lang={lang}"', page)
+        for query in ('?lang=fr', '?lang=', '?lang=en&lang=zh', '?feedback=1&lang=fr'):
+            self.assertEqual(self.http(url + query)[0], 400)
+        self.assertEqual(self.http(url + '?lang=en&before=7')[0], 404)
 
     def test_launches_reuse_one_browser_and_the_chat_selected_concept(self):
         with ThreadPoolExecutor(max_workers=2) as pool:

@@ -1,5 +1,7 @@
 # 知识卡片与明确反馈
 
+[English](Flashcard-Review.en.md)
+
 卡片让人先回想，再对照解释。每张围绕一个具体问题，简答要能独立读懂，把必要的符号和条件交代清楚即可。题目里省下的推导和算例可以放在展开区。
 
 复习卡保存在 Flashcards，来源来自正式知识目录。另一种卡可以从待学页发来，介绍关联的新概念。学习进度由你的解释、练习或确认决定。
@@ -76,7 +78,7 @@ $\bar X=3\sum_iY_i/(3m)=\sum_iY_i/m$。独立观测的数量仍是 m，复制只
 
 ### 来源
 
-[[Concepts/数理基础/Correlated Sampling#重复记录的计算|相关抽样：重复记录的计算]]
+[相关抽样：重复记录的计算](../Concepts/数理基础/Correlated%20Sampling.md#重复记录的计算)
 ```
 
 制卡后运行 `audit`，核对 `total`、`eligible`、`errors` 和 `needs_review`。写了一张卡却显示 `total: 0` 时，检查是否存到了 Flashcards，以及文件和元数据格式是否正确。来源待核对的卡片需要先处理，不能只改指纹来跳过检查。

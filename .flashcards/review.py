@@ -538,6 +538,7 @@ def page_html(root, session, *, preview=False, standalone=True, discovery=None, 
     if saved_ids is not None:
         local_save = (assets / "local-save.js").read_text(encoding="utf-8").strip()
     result = template.replace("__ROOT_ID__", root_id).replace("__LOCAL_SAVE__", local_save)
+    result = result.replace("__STANDALONE__", "true" if standalone else "false")
     if "__MATH_RENDERER__" in result:
         renderer = (assets / "vendor/katex-0.19.1.min.js").read_text(encoding="utf-8")
         renderer = re.sub(r"</script", r"<\\/script", renderer, flags=re.I)

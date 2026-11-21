@@ -5,12 +5,12 @@ status: active
 
 # 换了词表，两个模型还在比同一件事吗？ · Comparing multilingual tokenizers
 
-Karpathy 在 YouTube 演示怎样从 UTF-8 字节学出合并规则。两种词表可以编码完全相同的句子，产生的 token 数却不同。训练若都停在同一 token 数，两个模型见过的原文可能已经不同。[Let's build the GPT Tokenizer](../Videos/Karpathy%20on%20Tokenization.md)
+在 YouTube 看完 Karpathy 手写分词器的推导后，一个直觉顺理成章浮了出来：两套分词器读同一段话，原始字节数一模一样，切出来的 token 数却可以差出很远。如果训练评测时强行对齐在“相同 token 数”，两个模型其实压根没看过等量的信息。[Let's build the GPT Tokenizer](../Videos/Karpathy%20on%20Tokenization.md)
 
 | Question | Start with | Suggested concept |
 | --- | --- | --- |
-| How much text did each language contribute? | [Tokenization](../Concepts/计算机基础/Tokenization.md), [Byte-Level BPE](../Concepts/计算机基础/Byte-Level%20BPE.md), [Training Token Budget](../Concepts/计算机基础/Training%20Token%20Budget.md), [Language Mixture](../Concepts/计算机基础/Language%20Mixture.md) | [Tokenizer Fertility](../待学概念/计算机基础/Tokenizer%20Fertility.md) measures the token count per segmented word for each language. [Tokenizer Choice For LLM Training: Negligible or Crucial?](../Papers/Tokenizer%20Choice.md) |
-| Can we compare held-out losses under two segmentations? | [UTF-8 Encoding](../Concepts/计算机基础/UTF-8%20Encoding.md), [Cross-Entropy](../Concepts/信息论/Cross-Entropy.md), [Perplexity](../Concepts/信息论/Perplexity.md) | [Bits per Byte](../待学概念/计算机基础/Bits%20per%20Byte.md) uses a common denominator on identical scored text. [nanochat’s evaluation code](../Articles/Measuring%20Bits%20per%20Byte.md) |
-| Did one training run cost more? | [Vocabulary Size](../Concepts/计算机基础/Vocabulary%20Size.md), [Training FLOPs](../Concepts/计算机基础/Training%20FLOPs.md), [Downstream Evaluation](../Concepts/计算机基础/Downstream%20Evaluation.md) | [IsoFLOP Analysis](../待学概念/计算机基础/IsoFLOP%20Analysis.md) matches total compute before comparing downstream results. [Scaling Laws with Vocabulary: Larger Models Deserve Larger Vocabularies](../Papers/Vocabulary%20Scaling.md) |
+| 两种语言实际各读进了多少文本？ | [Tokenization](../Concepts/计算机基础/Tokenization.md), [Byte-Level BPE](../Concepts/计算机基础/Byte-Level%20BPE.md), [Training Token Budget](../Concepts/计算机基础/Training%20Token%20Budget.md), [Language Mixture](../Concepts/计算机基础/Language%20Mixture.md) | [Tokenizer Fertility](../待学概念/计算机基础/Tokenizer%20Fertility.md) measures tokens per word (or character) by language so a coarse vocab isn’t mistaken for more data. [Tokenizer Choice Paper](../Papers/Tokenizer%20Choice.md) |
+| 词表切法不同，怎么比验证集 loss？ | [UTF-8 Encoding](../Concepts/计算机基础/UTF-8%20Encoding.md), [Cross-Entropy](../Concepts/信息论/Cross-Entropy.md), [Perplexity](../Concepts/信息论/Perplexity.md) | [Bits per Byte](../待学概念/计算机基础/Bits%20per%20Byte.md) puts losses onto raw bytes as a shared denominator instead of apples-to-oranges per-token perplexity. [nanochat evaluation notes](../Articles/Measuring%20Bits%20per%20Byte.md) |
+| 大词表把参数和投影算力吃掉了，总训练算力拉齐了吗？ | [Vocabulary Size](../Concepts/计算机基础/Vocabulary%20Size.md), [Training FLOPs](../Concepts/计算机基础/Training%20FLOPs.md), [Downstream Evaluation](../Concepts/计算机基础/Downstream%20Evaluation.md) | [IsoFLOP Analysis](../待学概念/计算机基础/IsoFLOP%20Analysis.md) locks total compute across candidate vocabulary sizes before judging downstream scores. [Vocabulary Scaling](../Papers/Vocabulary%20Scaling.md) |
 
-这三项分别回答原文读了多少、损失按什么单位算、训练花费是否相当。可以从第二张卡算起，同一段文本上的每 token 损失不同，每字节损失却可能恰好相同。
+这三笔账合在一起才完整：各语种喂进去了多少原文、loss 按哪套分母折算、以及大词表多出来的 FLOPs 有没有放进同一把尺子里比。

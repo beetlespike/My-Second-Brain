@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 import workflow
 
@@ -20,6 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('review', ROOT / '.flashcards/review.py')
 review = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(review)
+
+
+def markdown_targets(path):
+    return re.findall(r'(!?)\[[^\]\n]*\]\(([^)\n]+)\)', workflow.prose(path.read_text(encoding='utf-8')))
 
 
 class WorkflowTests(unittest.TestCase):
@@ -30,12 +34,13 @@ class WorkflowTests(unittest.TestCase):
         workflow.initialize(ROOT, self.root)
 
     def test_example_links_and_card_sources_are_valid(self):
-        self.assertEqual(workflow.check(self.root)['errors'], [])
-        self.assertEqual((self.root / 'README.en.md').read_bytes(), (ROOT / 'README.en.md').read_bytes())
-        self.assertEqual((self.root / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
+        self.assert_vault_navigation(self.root)
+        for name in ('README.md', 'README.zh.md', 'MOCs/Knowledge-Index.md', 'MOCs/知识库入口.md', 'LICENSE'):
+            self.assertEqual((self.root / name).read_bytes(), (ROOT / name).read_bytes(), name)
         cards, errors, warnings = review.catalog(self.root)
         self.assertEqual((len(cards), len(errors), len(warnings)), (15, 0, 0))
         self.assertTrue(all(c['eligible'] for c in cards))
+        self.assertEqual(workflow.check(self.root)['errors'], [])
 
     def test_empty_start_has_guides_and_no_example_or_feedback(self):
         dest = Path(self.tmp.name) / 'empty'
@@ -46,8 +51,10 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(review.catalog(dest)[0], [])
         self.assertTrue((dest / 'Prompts/整理材料.md').is_file())
         self.assertEqual((dest / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
-        self.assertIn('[English](README.en.md)', (dest / 'README.md').read_text(encoding='utf-8'))
-        self.assertIn('[简体中文](README.md)', (dest / 'README.en.md').read_text(encoding='utf-8'))
+        self.assert_vault_navigation(dest)
+        self.assertEqual({p.name for p in (dest / 'MOCs').glob('*.md')}, {'Knowledge-Index.md', '知识库入口.md'})
+        for name in ('README.md', 'README.zh.md'):
+            self.assertFalse(any(url.startswith('assets/') for _, url in markdown_targets(dest / name)))
 
     def test_research_maps_cover_their_graphs_and_study_cards(self):
         def linked_notes(note):
@@ -74,29 +81,89 @@ class WorkflowTests(unittest.TestCase):
         source_dirs = {p.relative_to(self.root).parts[0] for p in linked_notes(serving_map)}
         self.assertTrue({'Papers', 'Articles', 'Chats', 'Videos'}.issubset(source_dirs))
 
-    def test_bilingual_homepages_offer_the_same_links_and_figures(self):
+    def assert_vault_navigation(self, vault):
+        required_links = {
+            'README.md': ('README.zh.md', 'MOCs/Knowledge-Index.md'),
+            'README.zh.md': ('README.md', 'MOCs/知识库入口.md'),
+            'MOCs/Knowledge-Index.md': ('知识库入口.md',),
+            'MOCs/知识库入口.md': ('Knowledge-Index.md',),
+        }
+        for page, required in required_links.items():
+            targets = markdown_targets(vault / page)
+            for url in required:
+                self.assertIn(('', url), targets, page)
+            for _, url in targets:
+                link = urlsplit(url)
+                if link.fragment and not link.scheme and not link.netloc:
+                    target = (vault / page).parent / unquote(link.path) if link.path else vault / page
+                    anchors = workflow.heading_anchors(review, target.read_text(encoding='utf-8'))
+                    self.assertIn(unquote(link.fragment), anchors, (page, url))
+        for name in ('AGENTS.md', 'CLAUDE.md', '.secondbrain.json'):
+            self.assertEqual((vault / name).read_bytes(), (ROOT / name).read_bytes(), name)
+        self.assertEqual((vault / 'CLAUDE.md').read_text(encoding='utf-8').splitlines(), ['@AGENTS.md'])
+        for name in ('README.en.md', 'GEMINI.md', 'AGENTS.override.md', '.cursor'):
+            self.assertFalse((vault / name).exists(), name)
         english_to_chinese = {
-            'README.md': 'README.en.md',
+            'README.zh.md': 'README.md',
+            '#start-in-5-minutes': '#5-分钟上手',
             'Guides/First-Run.md': 'Guides/第一次使用.md',
             'Guides/First-Run.md#todays-cards': 'Guides/第一次使用.md#今日知识卡',
             'Guides/First-Run.md#a-vault-of-your-own': 'Guides/第一次使用.md#自己的学习库',
-            'Guides/First-Run.md#work-through-the-serving-example': 'Guides/第一次使用.md#走一遍推理服务的例子',
+            'Guides/First-Run.md#browsing-the-example-vault': 'Guides/第一次使用.md#逛逛成品示例库',
+            'Guides/Flashcard-Review.en.md': 'Guides/Flashcard-Review.md',
+            'Guides/Flashcard-Review.en.md#feedback-and-saving': 'Guides/Flashcard-Review.md#反馈与保存',
             'Guides/Automation.md': 'Guides/自动整理与维护.md',
             'Guides/Sources-and-tools.md': 'Guides/来源与工具.md',
+            'MOCs/Knowledge-Index.md': 'MOCs/知识库入口.md',
             'assets/demo/human-ai-loop.en.png': 'assets/demo/human-ai-loop.zh.png',
+            'assets/demo/today-cards.en.png': 'assets/demo/today-cards.zh.png',
         }
+        english = markdown_targets(vault / 'README.md')
+        expected = [(kind, english_to_chinese.get(url, url)) for kind, url in english]
+        self.assertEqual(markdown_targets(vault / 'README.zh.md'), expected)
 
-        def targets(name):
-            text = (self.root / name).read_text(encoding='utf-8')
-            return re.findall(r'(!?)\[[^\]\n]*\]\(([^)\n]+)\)', workflow.prose(text))
+    def test_full_homepage_includes_example_guide_and_figures(self):
+        targets = markdown_targets(self.root / 'README.md')
+        self.assertIn(('', 'Guides/First-Run.md#browsing-the-example-vault'), targets)
+        for image in ('human-ai-loop.en.png', 'obsidian-serving.png', 'today-cards.en.png', 'obsidian-graph.png'):
+            self.assertIn(('!', 'assets/demo/' + image), targets)
 
-        english = [(kind, english_to_chinese.get(url, url)) for kind, url in targets('README.en.md')]
-        self.assertEqual(targets('README.md'), english)
+    def test_portal_reports_broken_files_images_and_sections(self):
+        en = self.root / 'README.md'
+        zh = self.root / 'README.zh.md'
+        en.write_text(en.read_text(encoding='utf-8') + '\n[Note](missing.md)\n[Section](#missing-section)\n'
+                      '<a name="about-me"></a>\n[About me](#about-me)\n'
+                      '[Personal note](MOCs/Personal.md#custom-id)\n', encoding='utf-8')
+        zh.write_text(zh.read_text(encoding='utf-8') + '\n![图](missing.png)\n[章节](Guides/第一次使用.md#缺失章节)\n', encoding='utf-8')
+        user_note = self.root / 'MOCs/Personal.md'
+        user_note.write_text('---\ntype: moc\n---\n\n<a id="custom-id"></a>\n[My block](#^my-block)\n', encoding='utf-8')
+        errors = workflow.check(self.root)['errors']
+        for page, url in [(en, 'missing.md'), (en, '#missing-section'), (zh, 'missing.png'), (zh, '#缺失章节')]:
+            self.assertTrue(any(page.name in msg and url in msg for msg in errors), (page.name, url))
+        self.assertFalse(any('Personal.md' in msg for msg in errors))
+        self.assertFalse(any('#about-me' in msg for msg in errors))
 
-    def test_missing_link_in_english_readme_is_reported(self):
-        note = self.root / 'README.en.md'
-        note.write_text(note.read_text(encoding='utf-8') + '\n[Missing note](missing.md)\n', encoding='utf-8')
-        self.assertTrue(any('README.en.md' in e and 'missing.md' in e for e in workflow.check(self.root)['errors']))
+    def test_full_copy_preserves_legacy_homepages(self):
+        (self.root / 'README.zh.md').rename(self.root / 'README.en.md')
+        legacy = {
+            'README.md': '[English](README.en.md#custom-id)\n',
+            'README.en.md': '<a id="custom-id"></a>\n[简体中文](README.md)\n',
+        }
+        for name, content in legacy.items():
+            (self.root / name).write_text(content, encoding='utf-8')
+        dest = Path(self.tmp.name) / 'legacy-copy'
+        workflow.initialize(self.root, dest)
+        self.assertEqual(workflow.check(dest)['errors'], [])
+        for name, content in legacy.items():
+            self.assertEqual((dest / name).read_text(encoding='utf-8'), content)
+        self.assertFalse((dest / 'README.zh.md').exists())
+        (dest / 'README.en.md').write_text('[Missing](missing-legacy-note.md)\n', encoding='utf-8')
+        self.assertTrue(any('README.en.md' in msg and 'missing-legacy-note.md' in msg for msg in workflow.check(dest)['errors']))
+        for mode in ('empty', 'demo'):
+            with self.subTest(mode=mode):
+                starter = Path(self.tmp.name) / mode
+                workflow.initialize(self.root, starter, **{mode: True})
+                self.assert_vault_navigation(starter)
 
     def test_demo_starts_with_sources_but_no_concept_notes_or_cards(self):
         dest = Path(self.tmp.name) / 'demo'
@@ -110,6 +177,9 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(list((dest / 'Concepts').rglob('*.md')), [])
         self.assertEqual(review.catalog(dest), ([], [], []))
         self.assertFalse((dest / '.flashcards/local').exists())
+        self.assert_vault_navigation(dest)
+        for name in ('README.md', 'README.zh.md'):
+            self.assertIn(('', 'assets/demo/serving-sources.md'), markdown_targets(dest / name))
         self.assertEqual(workflow.check(dest)['errors'], [])
 
     def test_initialization_never_overwrites_user_content(self):
@@ -151,13 +221,17 @@ class WorkflowTests(unittest.TestCase):
         (self.root / '.flashcards/local/private.txt').write_text('not for copying')
         (self.root / '.git').mkdir()
         (self.root / '.git/config').write_text('private history')
+        (self.root / 'GEMINI.md').write_text('private assistant rules')
+        (self.root / 'AGENTS.override.md').write_text('private workflow')
+        (self.root / '.cursor/rules').mkdir(parents=True)
+        (self.root / '.cursor/rules/private.mdc').write_text('private project')
         (self.root / 'Concepts/link.md').symlink_to(Path(self.tmp.name) / 'outside.md')
-        dest = Path(self.tmp.name) / 'copy'
-        workflow.initialize(self.root, dest)
-        self.assertFalse((dest / '.local').exists())
-        self.assertFalse((dest / '.flashcards/local').exists())
-        self.assertFalse((dest / '.git').exists())
-        self.assertFalse((dest / 'Concepts/link.md').exists())
+        for mode, options in [('full', {}), ('empty', {'empty': True}), ('demo', {'demo': True})]:
+            with self.subTest(mode=mode):
+                dest = Path(self.tmp.name) / mode
+                workflow.initialize(self.root, dest, **options)
+                for name in ('.local', '.flashcards/local', '.git', 'Concepts/link.md', 'GEMINI.md', 'AGENTS.override.md', '.cursor'):
+                    self.assertFalse((dest / name).exists(), name)
 
     def add_book(self, text):
         path = self.root / 'Books/读书笔记.md'
@@ -171,6 +245,14 @@ class WorkflowTests(unittest.TestCase):
 
     def test_custom_source_directory_survives_initialization(self):
         book = self.add_book('---\ntype: book\nsource_path: assets/demo/文章原文.md\nevidence_status: anchored\n---\n\n# 读书笔记\n')
+        for mode in ('empty', 'demo'):
+            with self.subTest(mode=mode):
+                dest = Path(self.tmp.name) / mode
+                workflow.initialize(self.root, dest, **{mode: True})
+                self.assertIn('Books', review.settings(dest)['source_dirs'])
+                self.assertTrue((dest / 'Books').is_dir())
+                self.assertEqual(list((dest / 'Books').iterdir()), [])
+                self.assertEqual(workflow.check(dest)['errors'], [])
         dest = Path(self.tmp.name) / 'with-books'
         workflow.initialize(self.root, dest)
         self.assertEqual((dest / 'Books/读书笔记.md').read_bytes(), book.read_bytes())

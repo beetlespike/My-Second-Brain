@@ -157,11 +157,7 @@ def resolve(db, root, payload, day):
     return {'handled': handled, 'duplicates': duplicates, 'pending_count': remaining}
 
 
-_HISTORY_HEADER = """<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>我的留言与回复 · My Second Brain</title>
-<style>
+_HISTORY_STYLE = """<style>
 :root { color-scheme: light dark; font: 16px/1.65 system-ui, sans-serif; }
 body { margin: 0; background: light-dark(#f3f6f8, #10161b); color: light-dark(#18252d, #e4eaf0); }
 main { max-width: 43rem; margin: 2rem auto 4rem; padding: 0 1rem; }
@@ -173,13 +169,54 @@ p { margin: .4rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 small { color: light-dark(#4e626f, #aabdc9); }
 a, summary { color: light-dark(#285971, #a8d2e7); }
 details, .reply { margin-top: .8rem; }
+nav { display: flex; gap: 1rem; align-items: baseline; justify-content: space-between; }
+nav span { white-space: nowrap; }
+nav [aria-current] { font-weight: 700; text-decoration: none; }
 summary { cursor: pointer; }
 details p { padding-left: .8rem; border-left: 2px solid light-dark(#cbdbe3, #52626d); }
-</style></head>
-<body><main><a href="today">返回今日知识卡</a><h1>我的留言与回复</h1>"""
+</style>"""
+_HISTORY_TEXT = {
+    'en': {
+        'title': 'My comments and replies', 'back': 'Back to today’s cards',
+        'answered': 'Assistant replied', 'revised': 'Card revised', 'linked': 'Related card added',
+        'pending': 'Pending · reviewed on the next deck run',
+        'empty': 'Your questions and your assistant’s replies will appear here.',
+        'reply': 'Assistant reply', 'card': 'View updated card', 'details': 'Details',
+        'older': 'Older comments',
+    },
+    'zh': {
+        'title': '我的留言与回复', 'back': '返回今日知识卡', **OUTCOMES,
+        'pending': '待处理 · 助手下次制卡时处理',
+        'empty': '这里会显示你在卡片下留下的问题，以及助手的处理结果。',
+        'reply': '助手回复', 'card': '查看处理后的卡片', 'details': '展开',
+        'older': '更早的留言',
+    },
+}
+
+# A bookmarked history URL can omit the language, including bookmarks made before the switcher.
+_HISTORY_LANGUAGE_SCRIPT = """<script>
+(() => {
+  const url = new URL(location.href);
+  const key = 'secondbrain:ui-lang';
+  const explicit = url.searchParams.get('lang');
+  if (explicit) {
+    try { localStorage.setItem(key, explicit); } catch (_) {}
+    return;
+  }
+  let saved;
+  try { saved = localStorage.getItem(key); } catch (_) {}
+  const preferred = ['en', 'zh'].includes(saved) ? saved : (/^zh/i.test(navigator.language) ? 'zh' : 'en');
+  if (preferred !== document.documentElement.lang) {
+    url.searchParams.set('lang', preferred);
+    location.replace(url);
+  }
+})();
+</script>"""
 
 
-def history_html(db, before=None):
+def history_html(db, before=None, *, language=None):
+    lang = language or 'zh'
+    text = _HISTORY_TEXT[lang]
     clauses = ' WHERE has_note(f.note)'
     args = []
     if before is not None:
@@ -187,28 +224,40 @@ def history_html(db, before=None):
         args.append(before)
     rows = list(db.execute(_SELECT + clauses + ' ORDER BY f.sequence DESC LIMIT ?', (*args, PAGE_SIZE + 1)))
     esc = html.escape
-    parts = [_HISTORY_HEADER]
+    here = '?feedback=1' + (f'&amp;before={before}' if before is not None else '')
+    switches = []
+    for code, name in (('en', 'EN'), ('zh', '中文')):
+        current = ' aria-current="true"' if code == lang else ''
+        switches.append(f'<a href="{here}&amp;lang={code}" lang="{code}"{current}>{name}</a>')
+    parts = [
+        f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        f'<title>{text["title"]} · My Second Brain</title>', _HISTORY_STYLE, _HISTORY_LANGUAGE_SCRIPT,
+        f'</head><body><main><nav><a href="today?lang={lang}">{text["back"]}</a>',
+        '<span>' + ' / '.join(switches) + '</span></nav>', f'<h1>{text["title"]}</h1>',
+    ]
     if not rows:
-        parts.append('<p>这里会显示你在卡片下留下的问题，以及助手的处理结果。</p>')
+        parts.append(f'<p>{text["empty"]}</p>')
     for row in rows[:PAGE_SIZE]:
         item = entry(db, row)
         result = item['resolution']
-        label = OUTCOMES[result['outcome']] if result else '待处理 · 助手下次制卡时处理'
+        label = text[result['outcome']] if result else text['pending']
         parts.extend(['<article>', '<small>' + esc(item['received']) + ' · ' + label + '</small>',
                       '<h2>' + esc(item['question'] or item['card_id']) + '</h2>',
                       '<p>' + esc(item['note']) + '</p>'])
         if result:
-            parts.append('<p class="reply"><strong>助手回复</strong> <small>' + esc(item['handled']) +
+            parts.append(f'<p class="reply"><strong>{text["reply"]}</strong> <small>' + esc(item['handled']) +
                          '</small><br>' + esc(result['reply']) + '</p>')
         target = item.get('result_card')
         if target:
-            parts.append('<details><summary>查看处理后的卡片</summary><p>' + esc(target['front']) +
+            parts.append(f'<details><summary>{text["card"]}</summary><p>' + esc(target['front']) +
                          '</p><p>' + esc(target['back']) + '</p>')
             if target['details']:
-                parts.append('<p><strong>展开</strong><br>' + esc(target['details']) + '</p>')
+                parts.append(f'<p><strong>{text["details"]}</strong><br>' + esc(target['details']) + '</p>')
             parts.append('</details>')
         parts.append('</article>')
     if len(rows) > PAGE_SIZE:
-        parts.append(f'<a href="?feedback=1&amp;before={rows[PAGE_SIZE-1]["id"]}">更早的留言</a>')
+        cursor = rows[PAGE_SIZE - 1]['id']
+        parts.append(f'<a href="?feedback=1&amp;before={cursor}&amp;lang={lang}">{text["older"]}</a>')
     parts.append('</main></body></html>')
     return ''.join(parts)

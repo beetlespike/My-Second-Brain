@@ -10,6 +10,6 @@ status: distilled
 
 靳岩岩 / 微信公众号 · [Original / 原文](https://mp.weixin.qq.com/s/Wt_HyaK98tPF39p1y6eMow)
 
-文中讨论算力优化时，把小批量推理和预训练放在一起看。解码每次只多几个 token，读取权重花的时间可能占大头。这个观察给连续合批提供了一个动机。
+算力优化那一节算了笔很直观的账：小批量推理每解码一个 token，几乎都要把整份模型权重从显存搬一遍，计算单元反而在等数据；把多条请求合到一起分摊读取成本，才算得过来这笔带宽账。
 
-In the article’s discussion of compute efficiency, small-batch generation reads a large set of weights for very few new tokens. That observation belongs under [Memory Bandwidth](../Concepts/推理系统/Memory%20Bandwidth.md). Reusing weights across several requests changes the arithmetic per byte. The serving workload determines how much that helps.
+The compute-efficiency section makes the hardware bottleneck concrete: when decoding at a small batch size, each step streams large model weights from HBM just to emit a tiny slice of tokens—putting the constraint squarely in [Memory Bandwidth](../Concepts/推理系统/Memory%20Bandwidth.md). Batching multiple sequences amortizes those weight reads across requests, though real serving traffic sets how much you can pack before latency pushes back.

@@ -9,9 +9,9 @@ stage: working
 
 # Prefill-Decode Interference
 
-长输入在一轮里占住 GPU，已经开始的回答也得等。把长输入分块后，可以让老请求在相邻两块之间各生成一步。对齐请求到达时间，才能分清排队和批内争用。
+连续合批允许新请求随到随插队，这给吞吐带来大好处，可代价也很直接：一条超长提示词挤进来要做预填充，这一轮计算会占住 GPU，原本正在平稳吐字的老请求也跟着硬生生停一拍。单看均值很难揪出它，得把每个请求的时间线与调度器迭代对齐，再缩小分块验证。
 
-A long prefill admitted by [Continuous Batching](../../Concepts/推理系统/Continuous%20Batching.md) can delay the next step of streams already decoding. A request’s average [TPOT](../../Concepts/推理系统/TPOT.md) can hide a single long gap. Compare token arrival times while replaying the same [Prompt Length Distribution](../../Concepts/推理系统/Prompt%20Length%20Distribution.md). [Chunked Prefill](../../Concepts/推理系统/Chunked%20Prefill.md) changes how much prompt work a decode step can encounter in one turn.
+Under [Continuous Batching](../../Concepts/推理系统/Continuous%20Batching.md), admitting a huge new prompt saturates GPU compute for a turn and stalls every active decode stream in the batch. A low average [TPOT](../../Concepts/推理系统/TPOT.md) easily masks one ugly mid-stream hitch, so isolating interference requires lining up scheduler prefill iterations against per-token arrival timestamps across controlled [Prompt Length Distribution](../../Concepts/推理系统/Prompt%20Length%20Distribution.md) replays and smaller [Chunked Prefill](../../Concepts/推理系统/Chunked%20Prefill.md) caps.
 
 [Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve](../../Papers/Sarathi-Serve.md)
 
@@ -19,8 +19,8 @@ A long prefill admitted by [Continuous Batching](../../Concepts/推理系统/Con
 
 ### 正面
 
-A stream pauses when a new 8k-token prompt is admitted. Which timestamps would help test for interference? / 长输入入批时老回答停了一下，你会对齐哪些时间？
+一条 8k 长输入刚塞进批里时，旁边正在流式输出的老请求突然卡顿了一下。排查时你要对齐哪两份时间记录，怎么做一组对照实验确认就是批内干扰？ / A running stream stalls right as a new 8k-token prompt enters the batch. What two traces do you line up, and what replay confirms colocation interference?
 
 ### 简答
 
-Compare the new request’s prefill iterations with token arrivals in streams already decoding. Replay the same arrivals with smaller chunks. Repeatedly shorter gaps at those iterations support interference as an explanation. / 对齐新请求的预填充轮次和老请求逐 token 的到达时间，用同一批到达记录缩小分块后再比一次。
+把新请求的 prefill 调度轮次，跟老请求每个 token 的到达时间戳对齐；如果总卡在 prefill 执行时刻，用相同到达记录缩小分块预算再跑一次，如果卡顿也跟着缩短，就多了一条支持批内干扰的证据。 / Line up the new prompt’s prefill steps with per-token arrival timestamps on active decodes; then replay the exact arrival trace under a smaller chunk budget and check whether those spikes shrink.

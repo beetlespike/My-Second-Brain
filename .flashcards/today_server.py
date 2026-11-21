@@ -20,7 +20,7 @@ import review
 
 HOST = '127.0.0.1'
 RECORD = 'today_listener'
-PROTOCOL = 3
+PROTOCOL = 4
 MAX_BODY = 256 * 1024
 
 
@@ -90,8 +90,17 @@ class TodayHandler(BaseHTTPRequestHandler):
             return None
         if method == 'GET' and self.path.startswith(self.server.prefix + 'today?'):
             params = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            language = params.pop('lang', None)
+            if language is not None and language not in (['zh'], ['en']):
+                self.reply(400, {'error': '请选择 en 或 zh。'})
+                return None
+            self.language = language[0] if language else None
+            if self.language and not params:
+                return 'today'
             if params.get('feedback') == ['1'] and not set(params) - {'feedback', 'before'}:
                 try:
+                    if 'before' in params and len(params['before']) != 1:
+                        raise ValueError()
                     self.before = int(params['before'][0]) if 'before' in params else None
                     if self.before is not None and not 0 < self.before < 2**63:
                         raise ValueError()
@@ -115,7 +124,7 @@ class TodayHandler(BaseHTTPRequestHandler):
         elif route == 'history':
             try:
                 with closing(review.connect(self.server.root, self.server.folder)) as db:
-                    history = inbox.history_html(db, self.before)
+                    history = inbox.history_html(db, self.before, language=self.language)
             except (OSError, sqlite3.Error) as exc:
                 self.reply(503, {'error': str(exc)})
                 return

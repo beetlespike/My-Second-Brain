@@ -92,6 +92,11 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(recent.count('<article>'), 20)
         cursor = re.search(r'feedback=1&amp;before=(\d+)', recent)[1]
         self.assertEqual(self.http(url + '?feedback=1&before=' + cursor).count('<article>'), 7)
+        english = self.http(url + '?feedback=1&lang=en')
+        self.assertIn(f'?feedback=1&amp;before={cursor}&amp;lang=en', english)
+        older = self.http(url + '?feedback=1&before=' + cursor + '&lang=en')
+        self.assertEqual(older.count('<article>'), 7)
+        self.assertIn(f'?feedback=1&amp;before={cursor}&amp;lang=zh', older)
         self.post_note('during-work', '这一条在处理过程中到达')
         replies = [{'id': item['id'], 'outcome': 'answered', 'reply': '已对照来源，答案里的条件仍然成立。'}
                    for item in first['items']]

@@ -9,9 +9,9 @@ stage: working
 
 # SLO-Constrained Goodput
 
-固定设备和请求分布，逐档增加到达率。逐条请求核对首 token 和后续输出两个门槛，再找出仍能让约定比例请求同时达标的最高负载。
+线上服务卡不卡，看的不是极限能压出多少并发，而是在同时守住首字延迟（TTFT）和后续输出速度（TPOT）两个红线的前提下，每张 GPU 还能扛住多少请求速率。把负载一档档往上推、逐条请求核对两项是否**一起过线**，找到达标率刚滑出红线前的那一档，才是真实可用的单卡服务力。
 
-Fix the GPU count, workload and latency targets. Increase [Request Arrival Rate](../../Concepts/推理系统/Request%20Arrival%20Rate.md) and measure the fraction of requests meeting both [TTFT](../../Concepts/推理系统/TTFT.md) and [TPOT](../../Concepts/推理系统/TPOT.md). DistServe reports the largest supported rate per GPU at a specified attainment target. Use joint per-request outcomes when two limits apply.
+Fix the hardware, prompt distribution, and both latency targets—[TTFT](../../Concepts/推理系统/TTFT.md) and [TPOT](../../Concepts/推理系统/TPOT.md)—then sweep [Request Arrival Rate](../../Concepts/推理系统/Request%20Arrival%20Rate.md) upward while grading **each request** on both limits together. DistServe defines per-GPU goodput as the highest load keeping joint attainment above your target floor.
 
 [DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving](../../Papers/DistServe.md)
 
@@ -19,8 +19,8 @@ Fix the GPU count, workload and latency targets. Increase [Request Arrival Rate]
 
 ### 正面
 
-On one GPU, 2, 3 and 4 requests/s give 98%, 93% and 84% joint attainment. The target is 90%. What rate did the test demonstrate? / 单卡三档负载的联合达标率如上，哪一档得到验证？
+在 90% 请求必须同时达标的红线下，单卡测到 `2 / 3 / 4 req/s` 时的联合达标率分别是 `98% / 93% / 84%`。这轮实测真正站得住的单卡容量上限报多少？ / With a 90% joint SLO floor, tested loads of 2, 3, and 4 req/s hit 98%, 93%, and 84% joint attainment. What per-GPU goodput is backed by this sweep?
 
 ### 简答
 
-3 requests/s/GPU is the highest tested rate that passes. A rate between 3 and 4 needs another measurement. / 已测档位中每秒 3 个请求达标。要知道 3 和 4 之间的界限，还得在这个区间加测。
+已实测的最高合格档是 3 req/s/GPU；4 req/s 已经跌破 90%，想更精细定位 3 到 4 之间的拐点，只能在这个区间补测。 / 3 req/s/GPU is the highest verified passing rate; pinpointing the knee between 3 and 4 requires extra runs inside that interval.

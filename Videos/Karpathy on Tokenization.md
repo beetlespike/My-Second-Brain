@@ -10,6 +10,6 @@ status: distilled
 
 Andrej Karpathy / YouTube · [Original / 原文](https://www.youtube.com/watch?v=zduSFxRajkE&t=1430s)
 
-从一个词到一串 UTF-8 字节，再到几枚 token。换了合并规则，词和字节都没换，token 数可以变。
+这一段把分词最反直觉的地方演了一遍：原始文本按 UTF-8 转成字节序列后，合并规则换一套，同一句话的字节一点没少，算出来的 token 数量却会差出不少——直接关系到后面多语言词表比谁吃得下更多原文。[代码参考 minbpe](https://github.com/karpathy/minbpe)
 
-Follow UTF-8 at 18:15, the merge algorithm at 23:50 and compression at 34:58. [UTF-8 Encoding](../Concepts/计算机基础/UTF-8%20Encoding.md) gives the initial bytes, [Byte-Level BPE](../Concepts/计算机基础/Byte-Level%20BPE.md) learns frequent pairs, and the same bytes can then require a different number of tokens. The author's [minbpe implementation](https://github.com/karpathy/minbpe) accompanies the lecture.
+Watch 18:15 for raw [UTF-8 Encoding](../Concepts/计算机基础/UTF-8%20Encoding.md), 23:50 for the merge loop, and 34:58 for compression ratios: with [Byte-Level BPE](../Concepts/计算机基础/Byte-Level%20BPE.md), two tokenizers can look at the exact same byte stream yet turn it into very different token counts—which immediately skews token-budget comparisons across languages. Pairs neatly with Karpathy’s [minbpe implementation](https://github.com/karpathy/minbpe).

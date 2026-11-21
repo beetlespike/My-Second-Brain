@@ -2,7 +2,7 @@
 
 [简体中文](来源与工具.md)
 
-Paste a link into the vault’s Codex chat. A phone’s share text can include the title along with the URL. The reader takes one URL at a time. To see what it found and where it saved the text, run this from the vault folder.
+Paste a link into your AI assistant chat inside the vault. A phone’s share text can include the title along with the URL. The reader takes one URL at a time. To see what it found and where it saved the text, run this from the vault folder:
 
 ```sh
 python3 tools/intake.py 'https://arxiv.org/abs/2309.06180'
@@ -15,7 +15,7 @@ python3 tools/intake.py 'https://arxiv.org/abs/2309.06180'
 | Papers | Uses a configured local parse first. An arXiv abstract link tries the HTML, then the PDF at the same version. A PDF link tries the PDF first. It can follow a designated paper PDF from a publisher page. An abstract is labelled separately. | Supply existing MinerU or Docling Markdown, a PDF, or OCR from scanned pages. Check figures and important equations against the original. |
 | Chats, books and practice | Reads selected Markdown or text files. | History access comes from the host. Markdown and plain-text chat exports, excerpts and lab notes work too. [Automation](Automation.md) |
 
-The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/整理材料.md), link checks and review tools. Codex uses the returned evidence to write the source note, check existing concepts and explain links. Learning progress is recorded separately.
+The template includes the [reader](../tools/intake.py), the [intake prompt](../Prompts/整理材料.md), link checks and review tools. Your assistant uses the returned evidence to write the source note, check existing concepts and explain links. Learning progress is recorded separately.
 
 ### Bring your own reader
 
@@ -41,10 +41,10 @@ python3 -m venv .venv
 .venv/bin/python -m pip install yt-dlp
 ```
 
-On Windows use `.venv\Scripts\python.exe`. The reader checks PATH, the current Python environment, the vault’s `.venv`, and an existing video-note runtime.
+On Windows use `.venv\Scripts\python.exe`. The reader checks PATH, the current Python environment, the vault’s `.venv`, and an existing local video-note runtime.
 
 For audio transcription, install [faster-whisper](https://github.com/SYSTRAN/faster-whisper) in that environment and supply local model weights. An existing installation works too. Select a model directory with `--asr-model`, or use `--no-asr` to try captions only. A previously cached small model can be detected automatically. Use `MSB_YTDLP`, `MSB_VIDEO_PYTHON` or `MSB_ASR_MODEL` to point to another installation. An authorized browser handles pages that require login.
 
 ### Read the result
 
-`ready` means usable text was found. Check `evidence` for the kind of text. `partial` returns the material available so far. `needs_network` means the shell could not reach the source. The assistant should retry using the host’s network approval. `needs_material` identifies missing evidence. These three statuses return exit code 2. Codex tries available alternatives before asking for missing material. Text and receipts stay in `.local/imports/`. Repeat links reuse a cached result, and `--refresh` reads again. New vaults exclude this cache and personal review records.
+`ready` means usable text was found. Check `evidence` for the kind of text. `partial` returns the material available so far. `needs_network` means the shell could not reach the source. The assistant should retry using the host’s network approval. `needs_material` identifies missing evidence. These three statuses return exit code 2. Your assistant tries available alternatives before asking for missing material. Text and receipts stay in `.local/imports/`. Repeat links reuse a cached result, and `--refresh` reads again. New vaults exclude this cache and personal review records.
