@@ -1,6 +1,7 @@
 """Open one on-demand, loopback-only review page per vault and feedback store."""
 
 from contextlib import closing
+from datetime import date
 import errno
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,11 +17,12 @@ from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
 import feedback_inbox as inbox
+import issue_archive
 import review
 
 HOST = '127.0.0.1'
 RECORD = 'today_listener'
-PROTOCOL = 5
+PROTOCOL = 6
 MAX_BODY = 256 * 1024
 
 
@@ -31,34 +33,73 @@ def checked_cards(root):
     return cards
 
 
-def prepare(root, folder, *, note=None, preferred=(), deliver=False):
-    cfg = review.settings(root)
-    day = review.today(cfg['timezone'])
+def prepare(db, root, cfg, day, cards, *, note=None, preferred=(), deliver=False):
     discovery = review.read_discovery_card(root, note) if note else None
+    discard = None
+    if deliver and discovery is None:
+        stored = review.selected_discovery(db, day)
+        if stored:
+            try:
+                refreshed = review.read_discovery_card(root, stored['path'])
+                discovery = refreshed if review.study_id(day, refreshed) == review.study_id(day, stored) else stored
+            except (FileNotFoundError, ValueError):
+                discard = stored
+    session, _ = review.select_session(db, cards, day, preferred, settings=cfg, allow_empty=True,
+                                       deliver=deliver, discovery=discovery, portal=not deliver,
+                                       discard_discovery=discard)
+    shown = session['date']
+    if discovery is None:
+        discovery = review.selected_discovery(db, shown)
+    if discovery is not None:
+        review.register_study(db, shown, discovery)
+    if not session.get('workspace_id'):
+        session['workspace_id'] = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0]
+    return session, discovery
+
+
+def visible_snapshot(deck, current, cfg):
+    cards = review.visible_cards(deck, current, cfg)
+    new_count = sum(c['presentation'] == 'new' for c in cards)
+    return dict(deck, cards=cards, new_count=new_count, review_count=len(cards) - new_count)
+
+
+def render_portal(db, root, cfg, today, deck, discovery, bank, *, archived=False, archive_open=False):
+    day = deck['date']
+    current = {c['id']: c for c in bank}
+    issue = dict(deck, **issue_archive.navigation(db, day))
+    issue.update(is_past_issue=day != today, past_issues_open=archive_open, interval_days=cfg['interval_days'])
+    issue['cards'] = [dict(card, **review.rating_state(db, card, current.get(card['id']), day, today))
+                      for card in deck['cards']]
+    saved = [r[0] for r in db.execute('SELECT DISTINCT card_id FROM feedback WHERE day=? ORDER BY card_id', (day,))]
+    page, _ = review.page_html(root, issue, discovery=discovery, saved_ids=saved, current_cards=bank, archived=archived)
+    return page
+
+
+def portal_page(root, folder, *, issue_day=None, archive_open=False):
     with closing(review.connect(root, folder)) as db, db:
-        reading_publication = not deliver and inbox.published_day(db) is not None
-        cards = review.cards_for_feedback(root) if reading_publication else checked_cards(root)
-        discard = None
-        if deliver and discovery is None:
-            stored = review.selected_discovery(db, day)
-            if stored:
-                try:
-                    discovery = review.read_discovery_card(root, stored['path'])
-                except (FileNotFoundError, ValueError):
-                    discard = stored
-        session, _ = review.make_session(db, cards, day, preferred, settings=cfg, allow_empty=True,
-                                         deliver=deliver, discovery=discovery, portal=not deliver,
-                                         discard_discovery=discard)
-        shown = session['date']
-        if discovery is None:
-            discovery = review.selected_discovery(db, shown)
-        if discovery is not None:
-            review.register_study(db, shown, discovery)
-        if not session.get('workspace_id'):
-            session['workspace_id'] = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0]
-        saved = [row[0] for row in db.execute('SELECT DISTINCT card_id FROM feedback WHERE day=? ORDER BY card_id', (shown,))]
-    count = len(review.visible_cards(session, {c['id']: c for c in cards}, cfg))
-    return session, discovery, saved, count
+        db.execute('BEGIN' if issue_day is not None else 'BEGIN IMMEDIATE')
+        cfg = review.settings(root)
+        today = review.today(cfg['timezone'])
+        if issue_day is not None:
+            pair = issue_archive.get(db, issue_day)
+            if pair is None:
+                return None
+            return render_portal(db, root, cfg, today, *pair, review.cards_for_feedback(root),
+                                 archived=True, archive_open=archive_open)
+        bank = review.cards_for_feedback(root) if inbox.published_day(db) is not None else checked_cards(root)
+        deck, discovery = prepare(db, root, cfg, today, bank)
+        if deck['date'] == today:
+            snapshot = visible_snapshot(deck, {c['id']: c for c in bank}, cfg)
+            issue_archive.record(db, snapshot, discovery, 'today')
+        else:
+            archived = issue_archive.get(db, deck['date'])
+            if archived:
+                saved_deck, discovery = archived
+                deck = dict(saved_deck, awaiting_publication=today)
+            else:
+                # An upgraded agent-managed vault may still be serving an unarchived legacy issue.
+                deck = visible_snapshot(deck, {c['id']: c for c in bank}, cfg)
+        return render_portal(db, root, cfg, today, deck, discovery, bank)
 
 
 class TodayHandler(BaseHTTPRequestHandler):
@@ -90,22 +131,37 @@ class TodayHandler(BaseHTTPRequestHandler):
             return None
         if method == 'GET' and self.path.startswith(self.server.prefix + 'today?'):
             params = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
-            language = params.pop('lang', None)
-            if language is not None and language not in (['zh'], ['en']):
-                self.reply(400, {'error': '请选择 en 或 zh。'})
+            if any(len(values) != 1 for values in params.values()):
+                self.reply(400, {'error': 'Duplicate query parameter', 'code': 'invalid_query'})
                 return None
-            self.language = language[0] if language else None
-            if self.language and not params:
+            query = {k: v[0] for k, v in params.items()}
+            self.language = query.pop('lang', None)
+            if self.language is not None and self.language not in ('en', 'zh'):
+                self.reply(400, {'error': '请选择 en 或 zh。', 'code': 'invalid_language'})
+                return None
+            if not query:
                 return 'today'
-            if params.get('feedback') == ['1'] and not set(params) - {'feedback', 'before'}:
+            if 'day' in query and query.keys() <= {'day', 'archive'}:
+                self.issue_day = query['day']
                 try:
-                    if 'before' in params and len(params['before']) != 1:
-                        raise ValueError()
-                    self.before = int(params['before'][0]) if 'before' in params else None
-                    if self.before is not None and not 0 < self.before < 2**63:
-                        raise ValueError()
+                    valid = date.fromisoformat(self.issue_day).isoformat() == self.issue_day
                 except ValueError:
-                    self.reply(400, {'error': '无效的留言页。'})
+                    valid = False
+                if not valid or ('archive' in query and query['archive'] != '1'):
+                    self.reply(400, {'error': 'Invalid issue date or archive flag', 'code': 'invalid_issue'})
+                    return None
+                self.archive_open = 'archive' in query
+                return 'issue'
+            if 'feedback' in query and query.keys() <= {'feedback', 'before'}:
+                try:
+                    if query['feedback'] != '1':
+                        raise ValueError
+                    cursor = query.get('before')
+                    self.before = int(cursor) if cursor is not None else None
+                    if cursor is not None and not (cursor.isascii() and cursor.isdecimal() and 0 < self.before < 2**63):
+                        raise ValueError
+                except ValueError:
+                    self.reply(400, {'error': '无效的留言页。', 'code': 'invalid_feedback_page'})
                     return None
                 return 'history'
         routes = {'GET': ('today',), 'POST': ('feedback', 'stop')}
@@ -129,10 +185,14 @@ class TodayHandler(BaseHTTPRequestHandler):
                 self.reply(503, {'error': str(exc)})
                 return
             self.reply(200, history, 'text/html')
-        elif route == 'today':
+        elif route in ('today', 'issue'):
             try:
-                deck, discovery, saved, _ = prepare(self.server.root, self.server.folder)
-                page, _ = review.page_html(self.server.root, deck, discovery=discovery, saved_ids=saved)
+                page = portal_page(self.server.root, self.server.folder,
+                                   issue_day=self.issue_day if route == 'issue' else None,
+                                   archive_open=route == 'issue' and self.archive_open)
+                if page is None:
+                    self.reply(404, {'error': 'No published issue for this date', 'code': 'issue_not_found'})
+                    return
             except (ValueError, KeyError, OSError, sqlite3.Error) as exc:
                 self.reply(503, {'error': str(exc)})
                 return
@@ -161,13 +221,11 @@ class TodayHandler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict) or not isinstance(payload.get('entries'), list) or not all(isinstance(e, dict) for e in payload['entries']):
                 raise ValueError('反馈格式不完整。')
             root = self.server.root
-            cards = review.cards_for_feedback(root)
-            received = review.today(review.settings(root)['timezone'])
             with closing(review.connect(root, self.server.folder)) as db:
-                workspace_id = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0]
-                if payload.get('workspace_id') != workspace_id:
-                    raise ValueError('反馈不属于这个学习库。')
-                receipt = review.save_feedback(db, cards, payload, received)
+                receipt = review.save_portal_feedback(db, root, payload)
+        except review.RatingConflict as exc:
+            self.reply(409, exc.payload)
+            return
         except (ValueError, TypeError, KeyError) as exc:
             self.reply(400, {'error': str(exc)})
             return
@@ -286,7 +344,18 @@ def run(root, args, *, publish=False):
         return stop(root, folder)
     result = start_listener(root, folder)
     deliver = bool(publish or args.discovery or args.prefer_new or args.chat_output)
-    deck, discovery, _, count = prepare(root, folder, note=args.discovery, preferred=args.prefer_new, deliver=deliver)
+    with closing(review.connect(root, folder)) as db, db:
+        db.execute('BEGIN IMMEDIATE')
+        cfg = review.settings(root)
+        day = review.today(cfg['timezone'])
+        bank = review.cards_for_feedback(root) if not deliver and inbox.published_day(db) is not None else checked_cards(root)
+        deck, discovery = prepare(db, root, cfg, day, bank, note=args.discovery, preferred=args.prefer_new,
+                                  deliver=deliver)
+        snapshot = visible_snapshot(deck, {c['id']: c for c in bank}, cfg)
+        count = len(snapshot['cards'])
+        if publish:
+            issue_archive.record(db, snapshot, discovery, 'daily --publish')
+            render_portal(db, root, cfg, day, deck, discovery, bank)
     fragment = None
     if args.chat_output and (count or discovery):
         review.render(root, deck, args.chat_output, standalone=False, discovery=discovery)

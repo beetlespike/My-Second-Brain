@@ -68,6 +68,137 @@ class TodayTests(unittest.TestCase):
                 'entries': [{'card_id': card['id'], 'version': card['version'], 'position': card['position'],
                              'rating': 'uncertain', 'note': '下次换一个例子。'}]}
 
+    def test_archive_starts_empty_and_only_web_delivery_records_an_issue(self):
+        self.run_cli('session')
+        self.run_cli('daily')
+        db_path = self.vault / '.flashcards/local/review.sqlite3'
+        with closing(sqlite3.connect(db_path)) as db, db:
+            ws = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()
+            self.assertTrue(db.execute("SELECT value FROM metadata WHERE key='agent_published_day'").fetchone()[0])
+            db.execute('DROP TABLE published_issues')
+        url = self.run_cli('today', '--no-open')['url']
+        with closing(sqlite3.connect(db_path)) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM published_issues').fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone(), ws)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first, repeated = pool.map(lambda _: self.deck(url)[0], range(2))
+        self.assertEqual(first, repeated)
+        self.assertFalse(first['has_archive'])
+        with closing(sqlite3.connect(db_path)) as db:
+            rows = db.execute('SELECT day,session,discovery,card_count,evidence FROM published_issues').fetchall()
+        self.assertEqual(len(rows), 1)
+        day, session, study, count, evidence = rows[0]
+        self.assertEqual((day, study, count, evidence), (first['date'], None, len(first['cards']), 'today'))
+        self.assertNotIn('excerpt', json.loads(session)['cards'][0]['sources'][0])
+        self.assertNotIn('rating_lock', json.loads(session)['cards'][0])
+
+    def test_concurrent_discovery_selection_and_same_day_archive(self):
+        url = self.run_cli('today', '--no-open')['url']
+        regular = self.deck(url)[0]
+        other = self.vault / '待学概念/Another.md'
+        other.write_text('# Another study\n\n## Study Card\n\n### Front\nWhy?\n\n### Short Answer\nBecause.\n')
+        notes = [DISCOVERY, other.relative_to(self.vault).as_posix()]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            result = list(pool.map(lambda note: self.command(self.vault, 'daily', '--publish', '--discovery', note,
+                                                             check=False), notes))
+        self.assertEqual(sorted(p.returncode for p in result), [0, 1])
+        winner = notes[next(i for i, p in enumerate(result) if p.returncode == 0)]
+        with closing(sqlite3.connect(self.vault / '.flashcards/local/review.sqlite3')) as db:
+            study, evidence = db.execute('SELECT discovery,evidence FROM published_issues WHERE day=?',
+                                         (regular['date'],)).fetchone()
+        self.assertEqual((json.loads(study)['path'], evidence), (winner, 'daily --publish'))
+        live = self.deck(url)[0]
+        self.assertEqual(live['discovery']['path'], winner)
+        self.assertEqual(regular['cards'], live['cards'])
+        self.assertEqual(self.deck(url + '?day=' + regular['date'])[0]['discovery'], live['discovery'])
+
+    def test_unrenderable_page_does_not_publish_an_issue(self):
+        url = self.run_cli('today', '--no-open')['url']
+        renderer = self.vault / '.flashcards/vendor/katex-0.19.1.min.js'
+        renderer.rename(renderer.with_suffix('.unavailable'))
+        self.assertEqual(self.http(url)[0], 503)
+        failed = self.command(self.vault, 'daily', '--publish', check=False)
+        self.assertNotEqual(failed.returncode, 0)
+        with closing(sqlite3.connect(self.vault / '.flashcards/local/review.sqlite3')) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM published_issues').fetchone()[0], 0)
+
+    def test_archive_routes_keep_original_positions_and_language(self):
+        url = self.run_cli('today', '--no-open')['url']
+        deck = self.deck(url)[0]
+        day = date.fromisoformat(deck['date'])
+        db_path = self.vault / '.flashcards/local/review.sqlite3'
+        with closing(sqlite3.connect(db_path)) as db, db:
+            raw = json.loads(db.execute('SELECT session FROM published_issues').fetchone()[0])
+            for ago in range(1, 9):
+                raw['date'] = (day - timedelta(days=ago)).isoformat()
+                raw['cards'][0]['position'] = 22
+                db.execute('INSERT INTO published_issues VALUES (?,?,NULL,?,?)',
+                           (raw['date'], json.dumps(raw), len(raw['cards']), 'test'))
+        card = deck['cards'][0]
+        path = self.vault / card['card_file']
+        def retire(match):
+            meta = json.loads(match[1])
+            if meta['id'] != card['id']:
+                return match[0]
+            return '<!-- card: ' + json.dumps(dict(meta, status='retired'), ensure_ascii=False) + ' -->'
+        original = path.read_text()
+        changed = re.sub(r'<!-- card: (\{[^\n]+\}) -->', retire, original)
+        self.assertNotEqual(original, changed)
+        path.write_text(changed)
+        target = (day - timedelta(days=1)).isoformat()
+        archive, _ = self.deck(url + '?day=' + target + '&archive=1&lang=en')
+        self.assertTrue(archive['is_past_issue'] and archive['past_issues_open'] and archive['has_archive'])
+        self.assertEqual(len(archive['past_issues']), 7)
+        more = archive['past_issues_more_url']
+        self.assertTrue(more.endswith('&archive=1'))
+        self.assertEqual(archive['today_url'], 'today')
+        self.assertEqual(archive['feedback_url'], 'today?feedback=1')
+        older, _ = self.deck(url + more.removeprefix('today') + '&lang=en')
+        self.assertEqual(len(older['past_issues']), 2)
+        self.assertEqual(self.deck(url + '?day=' + target + '&archive=1&lang=zh')[0], archive)
+        self.assertEqual([entry['day'] for entry in archive['past_issues'] if entry['is_current']], [target])
+        self.assertEqual(archive['cards'][0]['position'], 22)
+        self.assertEqual(archive['cards'][0]['rating_lock']['code'], 'inactive')
+        self.assertEqual(self.http(url, self.feedback(archive))[0], 409)
+        message = self.feedback(archive)
+        message['entries'][0]['rating'] = None
+        self.assertEqual(self.http(url, message)[0], 200)
+        for query in ('?day=2026-02-30','?day=bad','?day=' + target + '&archive=0','?day=' + target + '&day=' + target,
+                      '?feedback=1&before=0','?feedback=1&before=1&before=2'):
+            self.assertEqual(self.http(url + query)[0], 400, query)
+        for query in ('?day=1998-01-01','?archive=1','?lang=en&before=7','?day=' + target + '&feedback=1'):
+            self.assertEqual(self.http(url + query)[0], 404, query)
+
+    def test_stale_web_rating_rolls_back_other_cards_and_comment(self):
+        url = self.run_cli('today', '--no-open')['url']
+        deck = self.deck(url)[0]
+        packet = self.feedback(deck)
+        entry = packet['entries'][0]
+        entry.update(note='', expected_rating_sequence=None)
+        _, body = self.http(url, packet)
+        saved = json.loads(body)['rating_states'][entry['card_id']]
+        self.assertEqual(saved['saved_rating'], 'uncertain')
+        self.assertIsNone(saved['rating_lock'])
+        second = deck['cards'][1]
+        stale = dict(packet, batch_id='stale-tab', entries=[
+            dict(card_id=second['id'], version=second['version'], rating=None, note='Keep this draft.'),
+            dict(entry, rating='again', note='Also keep this draft.')])
+        status, body = self.http(url, stale)
+        self.assertEqual(status, 409)
+        conflict = json.loads(body)
+        self.assertEqual((conflict['card_id'], conflict['code'], conflict['rating_sequence']),
+                         (entry['card_id'], 'rating_changed', saved['rating_sequence']))
+        self.assertEqual(self.run_cli('notes'), [])
+        correction = dict(packet, batch_id='my-correction', entries=[
+            dict(entry, expected_rating_sequence=saved['rating_sequence'], rating='familiar')])
+        status, body = self.http(url, correction)
+        self.assertEqual(status, 200)
+        corrected = json.loads(body)['rating_states'][entry['card_id']]
+        self.assertGreater(corrected['rating_sequence'], saved['rating_sequence'])
+        self.assertEqual(self.deck(url)[0]['cards'][0]['saved_rating'], 'familiar')
+        retry = json.loads(self.http(url, packet)[1])
+        self.assertEqual((retry['duplicates'], retry['rating_states'][entry['card_id']]), (1, corrected))
+
     def test_browser_write_and_retry_use_the_existing_feedback_store(self):
         url = self.run_cli('today', '--no-open')['url']
         self.assertEqual(urlsplit(url).hostname, '127.0.0.1')
@@ -182,6 +313,10 @@ class TodayTests(unittest.TestCase):
         self.assertEqual(self.deck(result['url'])[0]['discovery']['front'], 'Question')
         with closing(sqlite3.connect(empty / '.flashcards/local/review.sqlite3')) as db:
             self.assertEqual(db.execute('SELECT count(*) FROM sessions').fetchone()[0], 0)
+            rows = list(db.execute('SELECT day,card_count,discovery FROM published_issues'))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0][:2], (result['date'], 0))
+            self.assertEqual(json.loads(rows[0][2])['front'], 'Question')
         for name in ('Today.command', 'Today.cmd'):
             self.assertTrue((empty / name).is_file())
         self.assertNotEqual(self.run_cli('today', '--no-open')['url'], prepared['url'])

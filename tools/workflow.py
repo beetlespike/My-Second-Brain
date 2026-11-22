@@ -2,7 +2,6 @@
 """建立独立学习目录，检查知识链接与来源属性。"""
 
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 import re
@@ -47,10 +46,12 @@ def files_under(path):
 
 
 def review_module():
-    spec = importlib.util.spec_from_file_location('review_check', ROOT / '.flashcards/review.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    # The review CLI and its sibling modules are installed beside this tool.
+    program_dir = str(ROOT / '.flashcards')
+    if program_dir not in sys.path:
+        sys.path.insert(0, program_dir)
+    import review
+    return review
 
 
 def homepages(root):

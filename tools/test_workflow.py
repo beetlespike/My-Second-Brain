@@ -2,7 +2,6 @@
 
 from contextlib import closing
 from fractions import Fraction
-import importlib.util
 import json
 from math import comb
 import os
@@ -28,9 +27,7 @@ PROMPT_PAIRS = {
     'intake.md': '整理材料.md', 'daily-review.md': '每日复习.md',
     'discover-concepts.md': '回顾与补学.md', 'study-concept.md': '带学新概念.md',
 }
-spec = importlib.util.spec_from_file_location('review', ROOT / '.flashcards/review.py')
-review = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(review)
+review = workflow.review_module()
 
 
 def markdown_targets(path):

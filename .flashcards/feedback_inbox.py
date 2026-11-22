@@ -166,6 +166,9 @@ article { margin: .85rem 0; padding: 1.2rem 1.4rem; border: 1px solid light-dark
           border-radius: .65rem; background: light-dark(#fff, #182128); }
 h2 { margin: .45rem 0; font-size: 1.1rem; }
 p { margin: .4rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+article { overflow-wrap: anywhere; }
+.fc-math { display: inline-block; max-width: 100%; overflow-x: auto; vertical-align: middle; white-space: normal; }
+.fc-math-display { display: block; margin-block: .5em; }
 small { color: light-dark(#4e626f, #aabdc9); }
 a, summary { color: light-dark(#285971, #a8d2e7); }
 details, .reply { margin-top: .8rem; }
@@ -183,6 +186,9 @@ _HISTORY_TEXT = {
         'empty': 'Your questions and your assistant’s replies will appear here.',
         'reply': 'Assistant reply', 'card': 'View updated card', 'details': 'Details',
         'older': 'Older comments',
+        'issue': 'Issue', 'position': 'Card {position}', 'version': 'Version {version}',
+        'author': 'Author', 'received': 'Submitted', 'handled': 'Replied',
+        'math_error': 'Formula could not be typeset. Showing raw TeX.',
     },
     'zh': {
         'title': '我的留言与回复', 'back': '返回今日知识卡', **OUTCOMES,
@@ -190,6 +196,9 @@ _HISTORY_TEXT = {
         'empty': '这里会显示你在卡片下留下的问题，以及助手的处理结果。',
         'reply': '助手回复', 'card': '查看处理后的卡片', 'details': '展开',
         'older': '更早的留言',
+        'issue': '期次', 'position': '第 {position} 张', 'version': '版本 {version}',
+        'author': '作者', 'received': '留言于', 'handled': '回复于',
+        'math_error': '公式暂时无法排版，显示原式',
     },
 }
 
@@ -214,7 +223,27 @@ _HISTORY_LANGUAGE_SCRIPT = """<script>
 </script>"""
 
 
+def _history_cards(db, day):
+    import issue_archive
+    import review
+
+    issued = issue_archive.get(db, day)
+    if issued:
+        session, discovery = issued
+    else:
+        previous = db.execute('SELECT payload FROM sessions WHERE day=?', (day,)).fetchone()
+        session = json.loads(previous[0]) if previous else {}
+        discovery = review.selected_discovery(db, day)
+    cards = {(card['id'], card['version']): card for card in session.get('cards', [])}
+    if discovery:
+        cards[(review.study_id(day, discovery), 1)] = discovery
+    return cards, issued is not None
+
+
 def history_html(db, before=None, *, language=None):
+    import issue_archive
+    import review
+
     lang = language or 'zh'
     text = _HISTORY_TEXT[lang]
     clauses = ' WHERE has_note(f.note)'
@@ -224,7 +253,7 @@ def history_html(db, before=None, *, language=None):
         args.append(before)
     rows = list(db.execute(_SELECT + clauses + ' ORDER BY f.sequence DESC LIMIT ?', (*args, PAGE_SIZE + 1)))
     esc = html.escape
-    here = '?feedback=1' + (f'&amp;before={before}' if before is not None else '')
+    here = '?feedback=1' + (f'&amp;before={esc(str(before))}' if before is not None else '')
     switches = []
     for code, name in (('en', 'EN'), ('zh', '中文')):
         current = ' aria-current="true"' if code == lang else ''
@@ -238,26 +267,55 @@ def history_html(db, before=None, *, language=None):
     ]
     if not rows:
         parts.append(f'<p>{text["empty"]}</p>')
+    snapshots = {}
     for row in rows[:PAGE_SIZE]:
         item = entry(db, row)
+        day = item['session_date']
+        if day not in snapshots:
+            snapshots[day] = _history_cards(db, day)
+        cards, issued = snapshots[day]
+        card = cards.get((item['card_id'], item['version']), {})
+        if issued and not card:
+            former = issue_archive.former_card(db, day, item['card_id'])
+            if former and former['version'] == item['version']:
+                card = former
+        metadata = [f'{text["issue"]} <time>{esc(day)}</time>']
+        if type(card.get('position')) is int and not item['card_id'].startswith('study:'):
+            metadata.append(text['position'].format(position=card['position']))
+        metadata.append(text['version'].format(version=esc(str(item['version']))))
+        author = card.get('author')
+        if issued and isinstance(author, str) and author.strip():
+            metadata.append(f'{text["author"]} {esc(author)}')
         result = item['resolution']
         label = text[result['outcome']] if result else text['pending']
-        parts.extend(['<article>', '<small>' + esc(item['received']) + ' · ' + label + '</small>',
-                      '<h2>' + esc(item['question'] or item['card_id']) + '</h2>',
+        question = card.get('front') or item['question'] or item['card_id']
+        parts.extend(['<article>', '<small>' + ' · '.join(metadata) + '</small>',
+                      '<h2 data-math-text>' + esc(question) + '</h2>',
+                      f'<small>{text["received"]} <time>{esc(item["received"])}</time> · {label}</small>',
                       '<p>' + esc(item['note']) + '</p>'])
         if result:
-            parts.append(f'<p class="reply"><strong>{text["reply"]}</strong> <small>' + esc(item['handled']) +
-                         '</small><br>' + esc(result['reply']) + '</p>')
+            parts.append(f'<p class="reply"><strong>{text["reply"]}</strong> <small>{text["handled"]} '
+                         f'<time>{esc(item["handled"])}</time></small><br><span data-math-text>'
+                         + esc(result['reply']) + '</span></p>')
         target = item.get('result_card')
         if target:
-            parts.append(f'<details><summary>{text["card"]}</summary><p>' + esc(target['front']) +
-                         '</p><p>' + esc(target['back']) + '</p>')
+            parts.append(f'<details><summary>{text["card"]}</summary><p data-math-text>' + esc(target['front']) +
+                         '</p><p data-math-text>' + esc(target['back']) + '</p>')
             if target['details']:
-                parts.append(f'<p><strong>{text["details"]}</strong><br>' + esc(target['details']) + '</p>')
+                parts.append(f'<p><strong>{text["details"]}</strong><br><span data-math-text>' +
+                             esc(target['details']) + '</span></p>')
             parts.append('</details>')
         parts.append('</article>')
     if len(rows) > PAGE_SIZE:
         cursor = rows[PAGE_SIZE - 1]['id']
         parts.append(f'<a href="?feedback=1&amp;before={cursor}&amp;lang={lang}">{text["older"]}</a>')
-    parts.append('</main></body></html>')
+    parts.append('</main>')
+    if rows:
+        parts.append(review.math_renderer_script(review.ASSET_DIR))
+        math_text = (review.ASSET_DIR / 'math-text.js').read_text(encoding='utf-8')
+        parts.append('<script>(() => {\n' + math_text + '\n'
+                     'for (const node of document.querySelectorAll("[data-math-text]")) {\n'
+                     f'  renderMathText(node, node.textContent, {json.dumps(text["math_error"])});\n'
+                     '}\n})();</script>')
+    parts.append('</body></html>')
     return ''.join(parts)

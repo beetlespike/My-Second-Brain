@@ -16,6 +16,8 @@ import tempfile
 import uuid
 from zoneinfo import ZoneInfo
 
+import reading_metadata
+
 ASSET_DIR = Path(__file__).resolve().parent
 TOOL_ROOT = ASSET_DIR.parent
 BUNDLED_VAULT = TOOL_ROOT / 'examples' / 'demo-vault'
@@ -25,8 +27,9 @@ NEW_LIMIT = 6
 SOURCE_DIRS = {"Concepts", "MOCs", "Chats", "Papers", "Articles", "Videos"}
 STUDY_DIRS = {"Study-Queue", "待学概念"}
 CARD_FIELDS = {
-    "Study Card": {"Front": "front", "Short Answer": "back", "Details": "details", "Sources": "sources"},
-    "知识卡": {"正面": "front", "简答": "back", "展开": "details", "来源": "sources"},
+    "Study Card": {"Front": "front", "Short Answer": "back", "Details": "details", "Sources": "sources",
+                   "Key Terms": "glossary"},
+    "知识卡": {"正面": "front", "简答": "back", "展开": "details", "来源": "sources", "相关概念": "glossary"},
 }
 META = re.compile(r"<!-- card: (.*?) -->", re.S)
 
@@ -134,8 +137,11 @@ def source_text(root, source):
     return section(p.read_text(encoding="utf-8"), source["heading"])
 
 
-def card_fields(body, language=None):
+def card_fields(body, language=None, *, metadata=None):
     lines, headings = markdown_structure(body)
+    if metadata is None:
+        first_heading = headings[0][0] if headings else len(lines)
+        metadata = reading_metadata.study_comment(unfenced_lines(lines), first_heading)
     fields = {}
     for title, content in sections_at_level(lines, headings, 3):
         for group, aliases in CARD_FIELDS.items():
@@ -150,6 +156,9 @@ def card_fields(body, language=None):
             fields[key] = content.strip()
     if not fields.get('front') or not fields.get('back'):
         raise ValueError('卡片需要非空的 Front 和 Short Answer，或「正面」和「简答」')
+    glossary = fields.pop('glossary', None)
+    section_lines = unfenced_lines(glossary.splitlines()) if glossary is not None else None
+    fields.update(reading_metadata.reading_fields(metadata, section_lines))
     return fields
 
 
@@ -165,8 +174,12 @@ def read_discovery_card(root, relative):
     if len(cards) != 1:
         raise ValueError(f'{path.name}：需要唯一的「知识卡」或 Study Card 二级标题，实际 {len(cards)} 处')
     heading, body = cards[0]
-    fields = card_fields(body, language=heading)
-    card = {'path': path.relative_to(root).as_posix(), 'title': title, 'front': fields['front'], 'back': fields['back']}
+    try:
+        fields = card_fields(body, language=heading)
+    except ValueError as exc:
+        raise ValueError(f'{path.name}：{exc}') from exc
+    card = {'path': path.relative_to(root).as_posix(), 'title': title}
+    card.update({key: fields[key] for key in ('front', 'back', 'author', 'glossary') if key in fields})
     if heading != '知识卡':
         card['heading'] = heading
     return card
@@ -212,9 +225,9 @@ def catalog(root):
                 if c["id"] in seen:
                     raise ValueError(f"重复编号 {c['id']}")
                 seen.add(c["id"])
-                fields = card_fields(block[match.end():])
-                c.update(front=fields['front'], back=fields['back'], details=fields.get('details', ''),
-                         card_file=str(p.relative_to(root)))
+                fields = card_fields(block[match.end():], metadata=c)
+                fields.pop('sources', None)  # Source paths and hashes come from the card metadata.
+                c.update(fields, details=fields.get('details', ''), card_file=str(p.relative_to(root)))
                 if not c["sources"]:
                     raise ValueError("来源不能为空")
                 key = re.sub(r"\s+", "", c["front"])
@@ -232,7 +245,7 @@ def catalog(root):
                 c["review_reasons"] = reasons
                 cards.append(c)
             except (KeyError, ValueError, IndexError, TypeError) as exc:
-                errors.append(f"{p.name}：{exc}")
+                errors.append(f"{p.name}：{title}：{exc}")
     return cards, errors, []
 
 
@@ -252,6 +265,9 @@ def connect(root, state_dir=None):
             PRIMARY KEY(card_id, version));
         CREATE TABLE IF NOT EXISTS sessions (
             day TEXT PRIMARY KEY, payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS published_issues (
+            day TEXT PRIMARY KEY, session TEXT NOT NULL, discovery TEXT, card_count INTEGER NOT NULL,
+            evidence TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS source_inventory (
             path TEXT PRIMARY KEY, hash TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS feedback (
@@ -301,6 +317,24 @@ def register(db, cards):
 
 def make_session(db, cards, day, preferred_new=(), *, settings=None, allow_empty=False,
                  deliver=False, discovery=None, portal=False, discard_discovery=None):
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        result = select_session(db, cards, day, preferred_new, settings=settings, allow_empty=allow_empty,
+                                deliver=deliver, discovery=discovery, portal=portal,
+                                discard_discovery=discard_discovery)
+        if result[0]['cards'] or deliver or discovery is not None:
+            db.commit()
+        else:
+            db.rollback()
+        return result
+    except Exception:
+        db.rollback()
+        raise
+
+
+def select_session(db, cards, day, preferred_new=(), *, settings=None, allow_empty=False,
+                   deliver=False, discovery=None, portal=False, discard_discovery=None):
+    """Select or reuse a deck while the caller holds the write transaction."""
     cfg = settings or dict(daily_limit=DAILY_LIMIT, new_limit=NEW_LIMIT, concept_limit=2,
                            interval_days=INTERVALS, timezone='Asia/Shanghai')
     date.fromisoformat(day)
@@ -311,94 +345,86 @@ def make_session(db, cards, day, preferred_new=(), *, settings=None, allow_empty
         if discovery is not None:
             remember_discovery(db, day, discovery)
         elif discard_discovery is not None:
+            db.execute('INSERT OR IGNORE INTO metadata VALUES (?, ?)',
+                       ('issued-study-id:' + day, study_id(day, discard_discovery)))
             db.execute('DELETE FROM metadata WHERE key=? AND value=?', ('discovery:' + day, dump(discard_discovery)))
-        if deck['cards'] or deliver or discovery is not None:
-            db.commit()
-        else:
-            db.rollback()
         return deck, reused
 
-    db.execute("BEGIN IMMEDIATE")
-    try:
-        if portal:
-            from feedback_inbox import published_day
-            issued = published_day(db)
-            if issued is not None:
-                row = db.execute("SELECT payload FROM sessions WHERE day=?", (issued,)).fetchone()
-                deck = json.loads(row[0]) if row else {
-                    'date': issued or day, 'timezone': cfg['timezone'], 'cards': [], 'new_count': 0, 'review_count': 0}
-                if issued != day:
-                    deck['awaiting_publication'] = day
-                db.commit()
-                return deck, True
-        if deliver:
-            from feedback_inbox import require_clear
-            require_clear(db, day)
-        register(db, cards)
-        previous = db.execute("SELECT payload FROM sessions WHERE day=?", (day,)).fetchone()
-        if previous:
-            return finish(json.loads(previous["payload"]), True)
-        if db.execute("SELECT 1 FROM sessions WHERE day>?", (day,)).fetchone():
-            raise ValueError("不能在已有卡组之前补建历史卡组；请读取原快照")
-        last, topics = {}, Counter()
-        week = (date.fromisoformat(day) - timedelta(days=7)).isoformat()
-        for row in db.execute("SELECT day, payload FROM sessions WHERE day<? ORDER BY day", (day,)):
-            for c in json.loads(row["payload"])["cards"]:
-                last[c["id"]] = row["day"]
-                if row["day"] >= week:
-                    topics[c["topic"]] += 1
-        feedback = {}
-        for row in db.execute("SELECT * FROM feedback WHERE applied=1 AND rating IS NOT NULL AND received<=? ORDER BY sequence", (day,)):
-            feedback[(row["card_id"], row["version"])] = dict(row)
-        new, old, priority = [], [], set()
-        for c in cards:
-            if not c["eligible"]:
-                continue
-            f = feedback.get((c["id"], c["version"]))
-            if f:
-                due = (date.fromisoformat(f["received"]) + timedelta(days=cfg['interval_days'][f["rating"]])).isoformat()
-                if due > day:
-                    continue
-                if last.get(c["id"], "") < due:
-                    priority.add(c["id"])
-            (old if c["id"] in last else new).append(c)
-        preferred_new = set(preferred_new)
-        chosen, concepts = [], Counter()
-
-        def take(pool, count, is_new):
-            added = 0
-            while added < count:
-                available = [c for c in pool if concepts[c["concept"]] < cfg['concept_limit']]
-                if not available:
-                    break
-                c = min(available, key=lambda c: (0 if c["id"] in priority else 1,
-                            last.get(c["id"], "") if not is_new else "",
-                            topics[c["topic"]], concepts[c["concept"]],
-                            is_new and c["id"] not in preferred_new, c["id"]))
-                pool.remove(c)
-                chosen.append(dict(c, presentation="new" if is_new else "review", position=len(chosen) + 1))
-                concepts[c["concept"]] += 1
+    if portal:
+        from feedback_inbox import published_day
+        issued = published_day(db)
+        if issued is not None:
+            row = db.execute("SELECT payload FROM sessions WHERE day=?", (issued,)).fetchone()
+            deck = json.loads(row[0]) if row else {
+                'date': issued or day, 'timezone': cfg['timezone'], 'cards': [], 'new_count': 0, 'review_count': 0}
+            if issued != day:
+                deck['awaiting_publication'] = day
+            return deck, True
+    if deliver:
+        from feedback_inbox import require_clear
+        require_clear(db, day)
+    register(db, cards)
+    previous = db.execute("SELECT payload FROM sessions WHERE day=?", (day,)).fetchone()
+    if previous:
+        return finish(json.loads(previous["payload"]), True)
+    if db.execute("SELECT 1 FROM sessions WHERE day>?", (day,)).fetchone():
+        raise ValueError("不能在已有卡组之前补建历史卡组；请读取原快照")
+    last, topics = {}, Counter()
+    week = (date.fromisoformat(day) - timedelta(days=7)).isoformat()
+    for row in db.execute("SELECT day, payload FROM sessions WHERE day<? ORDER BY day", (day,)):
+        for c in json.loads(row["payload"])["cards"]:
+            last[c["id"]] = row["day"]
+            if row["day"] >= week:
                 topics[c["topic"]] += 1
-                added += 1
-            return added
+    feedback = {}
+    for row in db.execute("SELECT * FROM feedback WHERE applied=1 AND rating IS NOT NULL AND received<=? ORDER BY sequence", (day,)):
+        feedback[(row["card_id"], row["version"])] = dict(row)
+    new, old, priority = [], [], set()
+    for c in cards:
+        if not c["eligible"]:
+            continue
+        f = feedback.get((c["id"], c["version"]))
+        if f:
+            due = (date.fromisoformat(f["received"]) + timedelta(days=cfg['interval_days'][f["rating"]])).isoformat()
+            if due > day:
+                continue
+            if last.get(c["id"], "") < due:
+                priority.add(c["id"])
+        (old if c["id"] in last else new).append(c)
+    preferred_new = set(preferred_new)
+    chosen, concepts = [], Counter()
 
-        new_count = take(new, cfg['new_limit'], True)
-        review_limit = cfg['daily_limit'] - new_count
-        take(old, review_limit, False)
-        session = {"schema_version": 1, "date": day, "timezone": cfg.get('timezone', 'Asia/Shanghai'), "cards": chosen,
-                   'limits': {key: cfg[key] for key in ('daily_limit', 'new_limit')},
-                   'workspace_id': db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0],
-                   "new_count": sum(c["presentation"] == "new" for c in chosen),
-                   "review_count": sum(c["presentation"] == "review" for c in chosen)}
-        if not chosen:
-            if allow_empty:
-                return finish(session, False)
-            raise ValueError("当天没有可用或到期的卡片；可等待下次复习，或检查来源与状态。")
-        db.execute("INSERT INTO sessions VALUES (?, ?)", (day, dump(session)))
-        return finish(session, False)
-    except Exception:
-        db.rollback()
-        raise
+    def take(pool, count, is_new):
+        added = 0
+        while added < count:
+            available = [c for c in pool if concepts[c["concept"]] < cfg['concept_limit']]
+            if not available:
+                break
+            c = min(available, key=lambda c: (0 if c["id"] in priority else 1,
+                        last.get(c["id"], "") if not is_new else "",
+                        topics[c["topic"]], concepts[c["concept"]],
+                        is_new and c["id"] not in preferred_new, c["id"]))
+            pool.remove(c)
+            chosen.append(dict(c, presentation="new" if is_new else "review", position=len(chosen) + 1))
+            concepts[c["concept"]] += 1
+            topics[c["topic"]] += 1
+            added += 1
+        return added
+
+    new_count = take(new, cfg['new_limit'], True)
+    review_limit = cfg['daily_limit'] - new_count
+    take(old, review_limit, False)
+    session = {"schema_version": 1, "date": day, "timezone": cfg.get('timezone', 'Asia/Shanghai'), "cards": chosen,
+               'limits': {key: cfg[key] for key in ('daily_limit', 'new_limit')},
+               'workspace_id': db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0],
+               "new_count": sum(c["presentation"] == "new" for c in chosen),
+               "review_count": sum(c["presentation"] == "review" for c in chosen)}
+    if not chosen:
+        if allow_empty:
+            return finish(session, False)
+        raise ValueError("当天没有可用或到期的卡片；可等待下次复习，或检查来源与状态。")
+    db.execute("INSERT INTO sessions VALUES (?, ?)", (day, dump(session)))
+    return finish(session, False)
 
 
 def cards_for_feedback(root):
@@ -410,7 +436,112 @@ def cards_for_feedback(root):
     return [] if errors else cards
 
 
-def save_feedback(db, cards, payload, received):
+def snapshot_rating_lock(shown, active):
+    if not active or active.get('status') in {'paused', 'retired'}:
+        return {'code': 'inactive'}
+    fields = ('version', 'front', 'back', 'details', 'sources', 'concept', 'topic')
+    if any(active.get(key) != shown.get(key) for key in fields):
+        return {'code': 'superseded'}
+    if not active['eligible']:
+        return {'code': 'inactive'}
+    return None
+
+
+def rating_state(db, shown, active, day, received, *, withdrawn=False):
+    from feedback_inbox import published_day
+
+    rows = db.execute("""
+        SELECT day, rating, sequence FROM feedback
+        WHERE card_id=? AND version=? AND applied=1 AND rating IS NOT NULL
+              AND (day>=? OR received=?)
+        ORDER BY day DESC, sequence DESC
+    """, (shown['id'], shown['version'], day, received))
+    saved = other = None
+    for row in rows:
+        if row['day'] == day:
+            if saved is None:
+                saved = row
+        elif other is None:
+            other = row
+    lock = snapshot_rating_lock(shown, active)
+    if lock is None:
+        if withdrawn:
+            lock = {'code': 'past_issue', 'day': day}
+        elif other:
+            code = 'rated_newer_issue' if other['day'] > day else 'rated_other_today'
+            lock = {'code': code, 'day': other['day']}
+        elif day != received or published_day(db) not in (None, day):
+            lock = {'code': 'past_issue', 'day': day}
+    return {'saved_rating': saved['rating'] if saved else None,
+            'rating_sequence': saved['sequence'] if saved else None, 'rating_lock': lock}
+
+
+class RatingConflict(ValueError):
+    def __init__(self, card_id, code, state):
+        messages = {
+            'rating_changed': '这张卡片的评分已更新，请核对已保存的评分。',
+            'past_issue': '本期已结束，仍可给当时的卡片留言。',
+            'superseded': '卡片已改版，仍可给这个版本留言。',
+            'inactive': '卡片已退出复习或来源待核对，仍可留言。',
+            'rated_newer_issue': '你已在更新的一期为这张卡片评分。',
+            'rated_other_today': '你今天已在另一期为这张卡片评分。',
+        }
+        super().__init__(messages[code])
+        self.payload = dict(card_id=card_id, code=code, error=messages[code], **state)
+
+
+def feedback_snapshot(db, day, received, study, portal):
+    if portal:
+        import issue_archive
+        from feedback_inbox import published_day
+
+        issue = issue_archive.get(db, day)
+        if issue is not None:
+            session, discovery = issue
+        elif day < received and published_day(db) == day:
+            # An upgraded listener may still be displaying yesterday's pre-archive issue.
+            row = db.execute('SELECT payload FROM sessions WHERE day=?', (day,)).fetchone()
+            session = json.loads(row[0]) if row else {}
+            discovery = selected_discovery(db, day)
+        else:
+            raise ValueError('找不到对应日期已发布的卡组')
+        snapshot = {c['id']: c for c in session.get('cards', [])}
+        if discovery is not None:
+            snapshot[study_id(day, discovery)] = {'version': 1}
+    else:
+        row = db.execute("SELECT payload FROM sessions WHERE day=?", (day,)).fetchone()
+        session = json.loads(row[0]) if row else {}
+        if not session and not study:
+            raise ValueError("找不到对应日期的卡组")
+        snapshot = {c['id']: c for c in session.get('cards', [])}
+        for cid in study:
+            if not cid.startswith('study:' + day + ':') or not db.execute(
+                    'SELECT 1 FROM versions WHERE card_id=? AND version=1', (cid,)).fetchone():
+                raise ValueError('找不到对应日期和版本的待学卡')
+            snapshot[cid] = {'version': 1}
+    workspace = session.get('workspace_id')
+    if portal or study:
+        workspace = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0]
+    return snapshot, workspace
+
+
+def save_feedback(db, cards, payload, received, *, portal=False):
+    db.execute('BEGIN IMMEDIATE')
+    with db:
+        return _record_feedback(db, cards, payload, received, portal)
+
+
+def save_portal_feedback(db, root, payload):
+    db.execute('BEGIN IMMEDIATE')
+    with db:
+        cards = cards_for_feedback(root)
+        received = today(settings(root)['timezone'])
+        return _record_feedback(db, cards, payload, received, portal=True)
+
+
+def _record_feedback(db, cards, payload, received, portal):
+    import issue_archive
+
     date.fromisoformat(received)
     if not isinstance(payload, dict) or not isinstance(payload.get("session_date"), str):
         raise ValueError("请提供题组日期和反馈内容")
@@ -423,68 +554,68 @@ def save_feedback(db, cards, payload, received):
     entries = payload.get("entries")
     if not isinstance(entries, list) or not 1 <= len(entries) <= 26 or not all(isinstance(e, dict) for e in entries):
         raise ValueError("每批可以提交至多 25 张复习卡和一张待学卡")
-    row = db.execute("SELECT payload FROM sessions WHERE day=?", (day,)).fetchone()
-    session = json.loads(row['payload']) if row else {}
     study = {e['card_id'] for e in entries if isinstance(e.get('card_id'), str) and e['card_id'].startswith('study:')}
     if len(study) > 1 or len(entries) - len(study) > 25:
         raise ValueError('超出一次题组的反馈范围')
-    if not session and not study:
-        raise ValueError("找不到对应日期的卡组")
-    workspace = session.get('workspace_id')
-    if study:
-        workspace = db.execute("SELECT value FROM metadata WHERE key='workspace_id'").fetchone()[0]
+    current = {c["id"]: c for c in cards}
+    include_states = portal and any('expected_rating_sequence' in e for e in entries)
+    count = duplicate = stale = 0
+    snapshot, workspace = feedback_snapshot(db, day, received, study, portal)
     if workspace and payload.get('workspace_id') != workspace:
         raise ValueError('反馈不属于当前学习目录，请使用原卡组导出的反馈')
-    snapshot = {c["id"]: c for c in session.get("cards", [])}
-    current = {c["id"]: c for c in cards}
-    for cid in study:
-        if not cid.startswith('study:' + day + ':') or not db.execute(
-                'SELECT 1 FROM versions WHERE card_id=? AND version=1', (cid,)).fetchone():
-            raise ValueError('找不到对应日期和版本的待学卡')
-        snapshot[cid] = {'version': 1}
-    count = duplicate = stale = 0
-    db.execute("BEGIN IMMEDIATE")
-    try:
-        ids = set()
-        for e in entries:
-            cid, version = e.get("card_id"), e.get("version")
-            if not isinstance(cid, str) or type(version) is not int:
-                raise ValueError("需要有效的卡片编号和版本")
-            if cid in ids:
-                raise ValueError("同一批反馈中卡片重复")
-            ids.add(cid)
-            if cid not in snapshot or snapshot[cid]["version"] != version:
-                raise ValueError(f"卡片与快照版本不匹配：{cid}")
-            if "position" in e and e["position"] != snapshot[cid].get("position"):
-                raise ValueError("卡片序号与编号不匹配")
-            rating, note = e.get("rating"), e.get("note", "")
-            if cid in study and rating is not None:
-                raise ValueError('待学卡只接收文字留言')
-            if rating is not None and (not isinstance(rating, str) or rating not in INTERVALS):
-                raise ValueError("未知反馈选项")
-            if not isinstance(note, str) or len(note) > 2000 or (rating is None and not note.strip()):
-                raise ValueError("反馈需要一个评分或 1–2000 字符的说明")
-            canonical = dump({"session_date": day, "card_id": cid, "version": version, "rating": rating, "note": note})
-            eid = f"{batch}:{cid}"
-            existing = db.execute("SELECT payload FROM feedback WHERE event_id=?", (eid,)).fetchone()
-            if existing:
-                if existing["payload"] != canonical:
-                    raise ValueError("同一反馈编号包含不同内容，请使用新批次")
-                duplicate += 1
-                continue
-            active = current.get(cid)
-            applied = cid in study or bool(active and active["version"] == version and active["eligible"]
-                                           and all(active.get(k) == snapshot[cid].get(k) for k in
-                                                   ('front', 'back', 'details', 'sources', 'concept', 'topic')))
-            db.execute("INSERT INTO feedback(event_id,day,card_id,version,rating,note,received,applied,payload) VALUES (?,?,?,?,?,?,?,?,?)",
-                       (eid, day, cid, version, rating, note, received, int(applied), canonical))
-            count += 1
-            stale += not applied
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    return {"saved": count, "duplicates": duplicate, "historical_only": stale}
+    ids, withdrawn = set(), set()
+    for e in entries:
+        cid, version = e.get("card_id"), e.get("version")
+        if not isinstance(cid, str) or type(version) is not int:
+            raise ValueError("需要有效的卡片编号和版本")
+        if cid in ids:
+            raise ValueError("同一批反馈中卡片重复")
+        ids.add(cid)
+        if portal and cid not in snapshot:
+            former = issue_archive.former_card(db, day, cid)
+            if former is not None:
+                snapshot[cid] = former
+                withdrawn.add(cid)
+        if cid not in snapshot or snapshot[cid]["version"] != version:
+            raise ValueError(f"卡片与快照版本不匹配：{cid}")
+        if "position" in e and e["position"] != snapshot[cid].get("position"):
+            raise ValueError("卡片序号与编号不匹配")
+        rating, note = e.get("rating"), e.get("note", "")
+        if cid in study and rating is not None:
+            raise ValueError('待学卡只接收文字留言')
+        if rating is not None and (not isinstance(rating, str) or rating not in INTERVALS):
+            raise ValueError("未知反馈选项")
+        if not isinstance(note, str) or len(note) > 2000 or (rating is None and not note.strip()):
+            raise ValueError("反馈需要一个评分或 1–2000 字符的说明")
+        canonical = dump({"session_date": day, "card_id": cid, "version": version, "rating": rating, "note": note})
+        eid = f"{batch}:{cid}"
+        existing = db.execute("SELECT payload FROM feedback WHERE event_id=?", (eid,)).fetchone()
+        if existing:
+            if existing["payload"] != canonical:
+                raise ValueError("同一反馈编号包含不同内容，请使用新批次")
+            duplicate += 1
+            continue
+        active = current.get(cid)
+        if portal and rating is not None:
+            state = rating_state(db, snapshot[cid], active, day, received, withdrawn=cid in withdrawn)
+            if state['rating_lock']:
+                raise RatingConflict(cid, state['rating_lock']['code'], state)
+            expected = e.get('expected_rating_sequence')
+            if expected is not None and (type(expected) is not int or expected < 1):
+                raise ValueError('评分序号必须为空或正整数')
+            if expected != state['rating_sequence']:
+                raise RatingConflict(cid, 'rating_changed', state)
+        applied = cid in study or snapshot_rating_lock(snapshot[cid], active) is None
+        db.execute("INSERT INTO feedback(event_id,day,card_id,version,rating,note,received,applied,payload) VALUES (?,?,?,?,?,?,?,?,?)",
+                   (eid, day, cid, version, rating, note, received, int(applied), canonical))
+        count += 1
+        stale += not applied
+    receipt = {"saved": count, "duplicates": duplicate, "historical_only": stale}
+    if include_states:
+        receipt['rating_states'] = {
+            cid: rating_state(db, snapshot[cid], current.get(cid), day, received, withdrawn=cid in withdrawn)
+            for cid in ids if cid not in study}
+    return receipt
 
 
 def feedback_notes(root, state_dir=None):
@@ -525,6 +656,13 @@ def register_study(db, day, card):
 
 
 def remember_discovery(db, day, card):
+    selected = selected_discovery(db, day)
+    identity = study_id(day, card)
+    key = 'issued-study-id:' + day
+    prior = db.execute('SELECT value FROM metadata WHERE key=?', (key,)).fetchone()
+    if (selected and study_id(day, selected) != identity) or (prior and prior[0] != identity):
+        raise ValueError('这一天已选定另一张探索卡。')
+    db.execute('INSERT OR IGNORE INTO metadata VALUES (?, ?)', (key, identity))
     register_study(db, day, card)
     db.execute("INSERT OR REPLACE INTO metadata VALUES (?, ?)", ("discovery:" + day, dump(card)))
 
@@ -542,15 +680,25 @@ def visible_cards(session, current, cfg):
     return sorted(old + new, key=lambda c: c['position'])
 
 
-def page_html(root, session, *, preview=False, standalone=True, discovery=None, saved_ids=None):
+def math_renderer_script(assets):
+    renderer = (assets / 'vendor/katex-0.19.1.min.js').read_text(encoding='utf-8')
+    renderer = re.sub(r'</script', r'<\\/script', renderer, flags=re.I)
+    return '<script>' + renderer + '</script>'
+
+
+def page_html(root, session, *, preview=False, standalone=True, discovery=None, saved_ids=None,
+              current_cards=None, archived=False):
     assets = ASSET_DIR
     template = (assets / "viewer.html").read_text(encoding="utf-8")
     display = json.loads(dump(session))
     if preview:
         display["preview"] = True
-    bank = cards_for_feedback(root) if saved_ids is not None else catalog(root)[0]
+    bank = current_cards
+    if bank is None:
+        bank = cards_for_feedback(root) if saved_ids is not None else catalog(root)[0]
     current = {c["id"]: c for c in bank}
-    display["cards"] = visible_cards(display, current, settings(root))
+    if not (archived or display.get('is_past_issue')):
+        display["cards"] = visible_cards(display, current, settings(root))
     display["omitted_count"] = len(session["cards"]) - len(display["cards"])
     if not display["cards"] and discovery is None and saved_ids is None:
         raise ValueError("当日卡组已全部退出复习范围，原快照仍可通过 show 查看")
@@ -561,13 +709,19 @@ def page_html(root, session, *, preview=False, standalone=True, discovery=None, 
     for c in display["cards"]:
         latest = current.get(c["id"])
         if not latest or not latest["eligible"] or latest["version"] != c["version"]:
+            c['snapshot_warning_code'] = 'source_or_card_updated'
             c["snapshot_warning"] = "来源或卡片已更新。这是当日快照，可查看原笔记核对。"
             if latest and latest["eligible"] and any(
                 not (root / source["path"]).is_file() for source in c["sources"]
             ):
-                c["sources"] = latest["sources"]
+                moved = [dict(source) for source in latest['sources']]
+                if archived or display.get('is_past_issue'):
+                    c['current_sources'] = moved
+                else:
+                    c["sources"] = moved
+                c['snapshot_warning_code'] = 'source_moved'
                 c["snapshot_warning"] = "这里保留了当日的题目和答案。原笔记已移动，下方列出当前卡片可复查的章节。"
-        for source in c['sources']:
+        for source in c['sources'] + c.get('current_sources', []):
             try:
                 source['excerpt'] = source_text(root, source)[:8000]
             except (OSError, KeyError, ValueError):
@@ -585,9 +739,9 @@ def page_html(root, session, *, preview=False, standalone=True, discovery=None, 
     result = template.replace("__ROOT_ID__", root_id).replace("__LOCAL_SAVE__", local_save)
     result = result.replace("__STANDALONE__", "true" if standalone else "false")
     if "__MATH_RENDERER__" in result:
-        renderer = (assets / "vendor/katex-0.19.1.min.js").read_text(encoding="utf-8")
-        renderer = re.sub(r"</script", r"<\\/script", renderer, flags=re.I)
-        result = result.replace("__MATH_RENDERER__", "<script>" + renderer + "</script>")
+        result = result.replace("__MATH_RENDERER__", math_renderer_script(assets))
+    if "__MATH_TEXT__" in result:
+        result = result.replace("__MATH_TEXT__", (assets / 'math-text.js').read_text(encoding='utf-8'))
     result = result.replace("__DECK_DATA__", data)
     if standalone:
         head = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'

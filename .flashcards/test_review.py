@@ -233,7 +233,8 @@ class ReviewTests(unittest.TestCase):
         with patch.object(review, "catalog", return_value=(self.cards, [], [])):
             display = review.render(self.root, original, self.root / "view.html")
         first = display["cards"][0]
-        self.assertEqual(first["sources"], card["sources"])
+        self.assertEqual(first["sources"], [dict(card["sources"][0], excerpt="# 缓存")])
+        self.assertNotIn("excerpt", card["sources"][0])
         self.assertEqual(first["back"], snapshot["cards"][0]["back"])
         self.assertEqual(first["version"], snapshot["cards"][0]["version"])
         self.assertEqual(original, snapshot)

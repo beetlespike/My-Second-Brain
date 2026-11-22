@@ -48,6 +48,18 @@ class MathRenderTests(unittest.TestCase):
         self.assertEqual(result["cards"][0]["version"], self.card["version"])
         self.assertEqual(result["cards"][0]["position"], 1)
 
+    def test_long_math_on_a_legacy_25_card_issue_stays_self_contained(self):
+        formula = r"$$\operatorname{Var}(\bar X)=\frac{1}{n^2}\sum_{i=1}^{n}\sum_{j=1}^{n}\operatorname{Cov}(X_i,X_j)$$"
+        cards = [dict(self.card, id=f'sb-fc-{i:04d}', position=i, details='\n\n'.join([formula] * 12))
+                 for i in range(1, 26)]
+        issue = dict(self.session, cards=cards, is_past_issue=True)
+        page, data = review.page_html(self.root, issue, current_cards=[], saved_ids=[])
+        self.assertEqual([c['position'] for c in data['cards']], list(range(1, 26)))
+        self.assertEqual(data['cards'][-1]['details'], cards[-1]['details'])
+        self.assertIn('renderToString', page)
+        self.assertNotIn('<script src=', page)
+        self.assertLess(len(page.encode()), 1_000_000)
+
     def test_missing_renderer_leaves_previous_output(self):
         output = self.root / "daily.html"
         output.write_text("previous valid view")
