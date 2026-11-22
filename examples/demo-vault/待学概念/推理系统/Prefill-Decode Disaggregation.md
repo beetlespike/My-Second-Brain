@@ -28,3 +28,9 @@ Splitting prefill and decode saves 30 ms of queuing, while moving 2 GB of KV cac
 按有效带宽直算：40 GB/s 链路光传输就要花 `2 GB / (40 GB/s) = 0.05 s = 50 ms`，比省下的 30 ms 还倒亏 20 ms；换到 80 GB/s 后传输降到 25 ms，扣除才开始净省 5 ms。
 
 At 40 GB/s, shipping 2 GB takes `2 GB / (40 GB/s) = 0.05 s = 50 ms`—20 ms slower than staying put, since only 30 ms was saved. At 80 GB/s, transfer drops to 25 ms, flipping the split into a net 5 ms win under those same assumptions.
+
+### 相关概念
+
+- Prefill & Decode（预填充与解码）：Prefill processes the prompt and builds its KV cache. Each decode step reuses the cache to predict the next token.｜预填充处理提示词并建立 KV 缓存。解码时，每一步都复用缓存来预测下一个 token。
+- KV Cache（KV 缓存）：Each attention layer keeps keys and values for earlier tokens so later steps can reuse them.｜每层注意力都会保存已处理 token 的键和值，供后续步骤直接使用。
+- Interconnect Bandwidth（卡间互连带宽）：The rate at which the link between GPU pools can carry data. Transfer time equals cache size divided by effective bandwidth.｜两组 GPU 之间的链路每秒实际能传多少数据。缓存大小除以有效带宽，就是传输时间。

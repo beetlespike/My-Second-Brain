@@ -46,9 +46,9 @@ I read in Obsidian and use Codex with a daily schedule to maintain my own vault,
 
 Along those links, my assistant spotted connected gaps I hadn’t studied yet and surfaced one as a discovery card alongside my morning review deck: [*prefill–decode disaggregation*](examples/demo-vault/待学概念/推理系统/Prefill-Decode%20Disaggregation.md#简答). Grasping that card’s tradeoff sharpens how you read [*DistServe*](examples/demo-vault/Papers/DistServe.md), and the next time you design a serving setup with AI, you already know what to ask back—starting with: once prefill and decode sit on separate GPU pools, which link actually carries the KV cache?
 
-Below is that live card webpage in dark mode (showing bilingual cards from my own Chinese–English vault; your vault stays in whichever language you use). Ratings enter the local schedule as soon as you click **Save** (older versions keep their own rating history), and any question you write underneath waits for the next card run so your assistant can answer, revise a card, or attach a related card under **My comments and replies**.
+The screenshot shows the example vault’s card page in dark mode. Its cards use both English and Chinese, as mine do. You can write yours in the language you use for learning. Saving a rating updates your local review schedule, and earlier card versions keep their rating history. If you leave a question, your assistant can answer it, revise the card, or link a related card on its next run. You’ll find the result under **My comments and replies**.
 
-<p align="center"><img src="assets/demo/today-cards.en.png" width="460" alt="Today’s Cards in dark mode, showing the expanded Prefill-Decode Disaggregation study card above a flipped review card, rating buttons, and comment box."></p>
+<p align="center"><img src="assets/demo/today-cards.en.png" width="460" alt="Dark card page from the example vault. The expanded prefill–decode study card has three glossary buttons. Below it, the back of a review card explains a 65 ms token gap, with recall ratings and a comment box."></p>
 
 [Peek at the example cards](Guides/First-Run.md#browsing-the-example-vault) · [Leave a comment on a review card](Guides/Flashcard-Review.en.md#feedback-and-saving)
 

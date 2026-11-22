@@ -10,13 +10,21 @@ Review cards live under `Flashcards/` and must cite sources inside your active k
 
 1. Your assistant runs `python3 .flashcards/review.py daily` and handles any outstanding written comments first. It can answer directly, revise the card, or attach a related card, then record each resolution with `resolve --input -`.
 2. Once pending comments reach zero, it runs `scan` to check added or modified sources, creates or updates cards from studied concepts, checks format, sources, and eligibility with `audit`, and publishes the deck to your vault’s fixed private webpage URL with `daily --publish` (optionally adding `--discovery <study-note>` to include one new-concept card).
-3. At that private bookmark URL, you flip cards, rate recall, or write questions—no need to open an assistant chat first. Clicking **Save** writes directly to your vault. Ratings feed the review schedule; written comments queue for the assistant’s next run (or you can ask it to handle them immediately). **My comments and replies** keeps the original question, the assistant’s reply, and any revised or linked card. If you use a host chat that supports `--chat-output` interactive cards, submissions share the exact same database.
+3. Open your private bookmark to flip cards and rate your recall. Tap a key term for its definition. Beside each source, you can copy its path, open it in Obsidian, or read an excerpt when one is available. To ask a question, type it or start with a shortcut such as **Example unclear**, then click **Save**. Ratings update the schedule. Your assistant handles comments on its next run, or when you ask. **My comments and replies** shows the original question, your comment, the reply, and any revised or linked card. It shows the card author if the issue recorded one and renders formulas in questions and replies offline. Interactive `--chat-output` cards in a supported chat use the same database.
 
 [Daily task prompt and resolution schema](../Prompts/daily-review.md)
 
 By default each daily deck includes up to 10 review cards, at most 6 first-time (`new`) cards, and at most 2 per concept, plus one optional new-concept card. When no review cards are due or eligible, the tool skips saving a review snapshot. Re-running on the same day reuses the existing deck.
 
 The three ratings—**Again** (`1` day), **Shaky** (`3` days), and **Familiar** (`14` days)—re-enter the candidate pool after those configurable fixed intervals (stored in `.secondbrain.json`; FSRS is not implemented yet, and learning gains under these intervals have not been empirically validated). Daily caps can push back when a due card actually appears. Without explicit feedback, cards only rotate and personal mastery stays unknown.
+
+## Past issues and editing today’s rating
+
+The private webpage shows **Past ▾** once it has archived decks from two different dates. Choose a date to see the cards in the order and wording last delivered that day. Source links open the current notes. You can leave comments on past cards and use **Back to today** to return to the current deck.
+
+On an active review card in today’s issue, you can save a comment and rate it later. To revise a saved rating, select **Change rating**, choose a rating and save. If another tab saved a rating after you started, the page shows the latest rating and clears your conflicting choice. Your comment and drafts on other cards remain available to submit.
+
+Past issues accept comments only (`past_issue`). Ratings also lock when the current card differs from the snapshot (`superseded`), when the card is unavailable, paused, retired or awaiting a source check (`inactive`), or when the same version already has a rating from a newer issue (`rated_newer_issue`) or a different issue rated today (`rated_other_today`).
 
 ## New-concept cards
 
@@ -34,13 +42,15 @@ If every row in a dataset is duplicated once, how does the standard error of the
 Both the sum and the row count double on every draw, so the sampling distribution of the mean is unchanged and the standard error stays the same.
 ```
 
-Run `python3 .flashcards/review.py daily --publish --discovery 'Study-Queue/Correlated Sampling.md'` (the bundled example uses `待学概念/数理基础/Correlated Sampling.md`). Open your fixed private webpage URL to view that card, expand its explanation, and leave a comment—even on days with no due review cards. A new-concept card only collects written comments; viewing or commenting on it does not change familiarity scores.
+For a study or review card, you can add two or three prerequisite terms under `### Key Terms` or `### 相关概念`. Write one bullet like `- Term: short definition` per term. Readers can open the definitions on the question side.
+
+Run `python3 .flashcards/review.py daily --publish --discovery 'Study-Queue/Correlated Sampling.md'` (the bundled example uses `待学概念/数理基础/Correlated Sampling.md`). Open your private bookmark to view the card, expand its explanation and leave a comment, even on days with no due review cards. A new-concept card accepts written comments only. Viewing or commenting on it leaves familiarity scores unchanged.
 
 ## Card format and versioning
 
 *(When you use a daily schedule or ask your assistant to create cards from notes you studied, your assistant writes and verifies this format for you.)*
 
-Each flashcard file uses `type: flashcard_set`. Separate cards with H2 (`##`) headings, followed immediately by a `<!-- card: {...} -->` comment holding `id`, `version`, `status`, `concept`, `topic`, and `sources`. Use English headings (`### Front`, `### Short Answer`, optional `### Details` and `### Sources`) or Chinese headings (`### 正面`, `### 简答`, `### 展开`, `### 来源`), without mixing heading languages on the same card.
+Each flashcard file uses `type: flashcard_set`. Separate cards with H2 (`##`) headings, followed immediately by a `<!-- card: {...} -->` comment with `id`, `version`, `status`, `concept`, `topic` and `sources`. You can also include an `author`. To supply a `glossary`, use either the metadata or the key terms section. Use English headings (`### Front`, `### Short Answer`, optional `### Details`, `### Sources`, and `### Key Terms`) or Chinese headings (`### 正面`, `### 简答`, `### 展开`, `### 来源`, and `### 相关概念`), without mixing structural heading languages on the same card.
 
 IDs take the form `sb-fc-0001` and stay stable across revisions. `status` is `active`, `paused`, or `retired`. Each source entry stores a vault-relative `path`, an exact `heading`, and that section’s `sha256`.
 
@@ -74,7 +84,7 @@ Read the section and check that it supports your card. Run this command from the
 python3 .flashcards/review.py source-hash 'Concepts/Correlated Sampling.md' 'Duplicate-record calculation'
 ```
 
-If a source section changes, disappears, or stops having a unique heading, the card drops out of future decks until reviewed. Update the card text, source hash, and increment `version`. Hashes only detect local text changes—they do not verify scientific correctness or remote upstream edits. `audit` checks card format, source hashes, and eligibility, while modifying a registered card’s text or sources without bumping `version` is rejected when registering cards (for example during `session` or `daily --publish`).
+If a source section changes, disappears or loses its unique heading, the card drops out of future decks until reviewed. Check the section, update the citation and revise the card as needed. Bump `version` when changing a registered card’s question, short answer, details, concept, topic or sources. Edits limited to the glossary or `author` preserve the card hash and review schedule. `audit` checks format, source hashes and eligibility. Registration (for example, during `session` or `daily --publish`) checks the version. Source hashes detect local text changes. Confirm the underlying claim against the source itself.
 
 Save the card in `Flashcards/Correlated Sampling.md` with the hash you just computed. Your assistant can do both steps for you.
 
@@ -113,10 +123,10 @@ Historical decks keep the original wording and version, flagging if the source c
 
 ## Feedback and saving
 
-Feedback payloads bind strictly to the deck’s `workspace_id`, `session_date`, `card_id`, and `version`, with the original `position` checked when supplied. Retries are deduplicated by `batch_id` and card ID and rolled back atomically if any card ID or version is invalid. Feedback from one vault cannot be imported into another.
+Feedback identifies the deck and card by `workspace_id`, `session_date`, `card_id` and `version`. The tool checks `position` when supplied and deduplicates retries by `batch_id` and card ID. On the private webpage, a rating also carries `expected_rating_sequence`, the sequence shown when you started editing, or `null` for a first rating. If that value is stale, the server returns `409 Conflict` and rejects the whole batch. An invalid card ID or version also rolls back the batch. Feedback belongs to the vault that issued the deck.
 
-Drafts are kept locally in the browser as you flip or switch tabs, while saved ratings and notes live in the vault’s SQLite store. If you ever need a standalone offline HTML deck, run `session` and later import an exported JSON file with `feedback --input <file>`. Written questions are stored separately and never converted into ratings automatically. When correcting an error, verify the primary source first and update related guides or cards if a pattern recurs.
+The private webpage keeps drafts in your browser for the same vault, issue, card and version as you flip or switch tabs, while saved ratings and notes live in the vault’s SQLite store. If you ever need a standalone offline HTML deck, run `session` and later import an exported JSON file with `feedback --input <file>`. Written questions are stored separately and never converted into ratings automatically. When correcting an error, verify the primary source first and update related guides or cards if a pattern recurs.
 
-`daily` returns unresolved comments in pages of up to 20 (passing `--after <next_after>` to continue if more remain), including questions left on older card versions. A direct reply, a card revision, or a linked follow-up card counts as a resolution, and related or revised cards can be expanded under the comment thread. A deck already published for today keeps its snapshot; inspect the last 20 notes anytime with `notes`.
+`daily` returns unresolved comments in pages of up to 20 (passing `--after <next_after>` to continue if more remain), including questions left on older card versions or past issues. A direct reply, a card revision, or a linked follow-up card counts as a resolution, and related or revised cards can be expanded under the comment thread. Use `notes` to inspect the latest 20 written comments.
 
 `.flashcards/local/review.sqlite3` holds card versions, published decks, feedback, and processed source hashes—treat it as personal data worth backing up. Generated HTML can always be rebuilt. Never copy `.flashcards/local/` when templating a new vault; back up and restore your database whole rather than mixing imports across vaults.
