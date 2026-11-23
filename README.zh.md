@@ -14,6 +14,10 @@ My Second Brain 是一套开源的本地学习框架，AI 助手把你学过的�
 
 ![共享点亮后「你的大脑」的对称发光双环。左环里，学完视频、文章、论文或 AI 对话后交给助手，助手用内置工具整理进独属于你的知识网络，生成复习卡与探索卡；你的评分和疑问回传修订笔记与卡片。右环里，不断成长的大脑为与 AI 共事提供问题、品味与判断，执行带回的新困惑再进入下一轮学习。](assets/demo/human-ai-loop.zh.png)
 
+观看演示：
+
+https://github.com/user-attachments/assets/e38f5d78-a713-4324-9884-7dbb26f59bcc
+
 ## 每天怎么用
 
 1. **只管扔给助手学过的材料**：贴入你刚看完的视频、文章、论文或保存的 AI 对话，也可按需设好定期扫对话的任务。内置读取工具会提取可用正文，助手把新概念接进你的 Markdown 笔记与主题地图（MOC）。
@@ -36,9 +40,11 @@ python3 tools/workflow.py init ../My-Learning --empty
 
 笔记是电脑上的纯 Markdown 文件，采用标准相对路径链接，复习记录存在本地 SQLite 数据库。用任何编辑器都能读写，想看知识图谱可用 Obsidian。Codex、Cursor 和 Antigravity 会直接读取根目录 `AGENTS.md`，Claude Code 通过 `CLAUDE.md` 导入同一份规则。是否能自动扫描历史聊天取决于客户端宿主接口；使用云端模型时，发送给服务商的内容由你授权进入上下文的工具决定。
 
-具体操作见[第一次使用指南](Guides/第一次使用.md#自己的学习库)，也可以按需查看[来源与工具](Guides/来源与工具.md)和[自动化设置](Guides/自动整理与维护.md)。
+具体操作见[第一次使用指南](Guides/第一次使用.md#自己的学习库)，也可以按需查看[来源与工具](Guides/来源与工具.md)和[自动化设置](Guides/自动整理与维护.md)——内置读取器同样支持读取指定的公开 X 帖及其附带的 X 长文，外加网页文章、视频、论文、本地 Markdown 等。
 
 ## 一个真实例子：从一周所学到真实工作
+
+起初只是个很朴素的念头：现在的学习越来越碎片化——今天一条短片，明天半篇论文、几条 X 帖子、一段 AI 对话……总怕刚想明白的东西过几天就淡了，也隐约有种错失焦虑。但顺着这张网用下来，它慢慢长成了一件更大的事：复习卡替我兜住真正学过的知识，探索卡顺着我自己的线索找到那块还没补上的空白（missing piece），让每一次零散的收获，最终都沉淀成我与 AI 共事时自己的眼光与判断（human in the loop）。
 
 我自己平时用 Obsidian 阅读、用 Codex 配每日自动化维护库，出卡直接在我固定的私人网页里看。这周我先后学了四份围绕推理服务的材料——B 站[讲 KV 缓存的六分钟短片](https://www.bilibili.com/video/BV1jAZwBGEwi/)、公众号文章[《预训练工程师在干什么》](https://mp.weixin.qq.com/s/Wt_HyaK98tPF39p1y6eMow)、[*Sarathi-Serve*](https://www.usenix.org/conference/osdi24/presentation/agrawal) 论文，以及与 GPT 讨论流式计时的[公开改写对话（数字已重设）](examples/demo-vault/assets/demo/streaming-dialogue.md)——外加一段 [YouTube 分词课](https://www.youtube.com/watch?v=zduSFxRajkE&t=1430s)。助手调用读取器把前四份跨语言材料汇进了同一张[推理服务地图](examples/demo-vault/MOCs/Streaming%20LLM%20Serving.md)，分词课接进了[分词地图](examples/demo-vault/MOCs/Multilingual%20Tokenizers.md)。
 

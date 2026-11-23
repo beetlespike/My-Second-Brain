@@ -170,8 +170,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn(('', 'Guides/First-Run.md#browsing-the-example-vault'), targets)
         for image in ('human-ai-loop.en.png', 'obsidian-serving.png', 'today-cards.en.png', 'obsidian-graph.png'):
             self.assertIn(('!', 'assets/demo/' + image), targets)
+        attachment_prefix = 'https://github.com/user-attachments/assets/'
+        asset_id = r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+        demo_urls = []
         for name, lang in [('README.md', 'en'), ('README.zh.md', 'zh')]:
             text = (ROOT / name).read_text(encoding='utf-8')
+            self.assertEqual(text.count(attachment_prefix), 1, name)
+            intro = text.split('\n## ', 1)[0]
+            hero = f'](assets/demo/human-ai-loop.{lang}.png)'
+            self.assertIn(hero, intro, name)
+            # GitHub embeds a video when its URL occupies a paragraph of its own.
+            caption_and_video = intro.split(hero, 1)[1]
+            embed = re.fullmatch(r'\n\n[^\n]+\n\n(' + re.escape(attachment_prefix) + asset_id + r')\n', caption_and_video)
+            self.assertIsNotNone(embed, name)
+            demo_urls.append(embed.group(1))
             tag = next(t for t in re.findall(r'<img\b[^>]*>', text, re.I) if 'today-cards.' + lang + '.png' in t)
             self.assertRegex(tag, r'''\bwidth=["']460["']''')
             for _, url in markdown_targets(ROOT / name):
@@ -179,6 +191,7 @@ class WorkflowTests(unittest.TestCase):
                 if link.fragment and not link.scheme and not link.netloc:
                     target = ROOT / (unquote(link.path) or name)
                     self.assertIn(unquote(link.fragment), workflow.heading_anchors(review, target.read_text(encoding='utf-8')), url)
+        self.assertEqual(demo_urls[0], demo_urls[1], 'Both homepages must embed the same demo')
         self.assertEqual(workflow.check(ROOT)['errors'], [])
 
     def test_portal_reports_broken_files_images_and_sections(self):

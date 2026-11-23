@@ -14,6 +14,10 @@ This private vault keeps formal concept notes only for what you have genuinely l
 
 ![Two glowing infinity loops meeting at an illuminated neural brain representing Your Mind. On the left, after learning from videos, articles, papers, or AI chats, you share sources with your AI assistant to build a private knowledge network and generate daily cards for reviewing learned knowledge and exploring new concepts; ratings and questions return to revise both notes and cards. On the right, a stronger mind brings sharper framing, taste, and judgment to working with AI, while execution feeds new puzzles back into learning.](assets/demo/human-ai-loop.en.png)
 
+Watch the demo:
+
+https://github.com/user-attachments/assets/e38f5d78-a713-4324-9884-7dbb26f59bcc
+
 ## How it works
 
 1. **Share what you studied**: Paste links to videos, articles, papers, or saved AI chats—or set up an optional scheduled task to sweep selected AI learning chats. Built-in readers fetch the text, and your assistant connects each concept into your Markdown notes and topic maps (MOCs).
@@ -36,9 +40,11 @@ Open `../My-Learning` with your AI assistant and paste a link or file from **som
 
 Notes are plain Markdown files on your computer using standard relative links, and your review history lives in a local SQLite database. Open the vault in any Markdown editor, or in Obsidian for its graph view. Codex, Cursor, and Antigravity read root `AGENTS.md`, and Claude Code imports it via `CLAUDE.md`. Scheduled chat-history sweeping depends on whether your host client exposes conversation history. When using a cloud model, the provider receives whatever your permissions and tools put into its context.
 
-See the [First-use guide](Guides/First-Run.md#a-vault-of-your-own) to start your own vault, or check [Sources and tools](Guides/Sources-and-tools.md) and [Automation settings](Guides/Automation.md).
+See the [First-use guide](Guides/First-Run.md#a-vault-of-your-own) to start your own vault, or check [Sources and tools](Guides/Sources-and-tools.md) and [Automation settings](Guides/Automation.md)—built-in readers also support public X posts and attached X Articles (one selected item at a time), alongside web articles, videos, PDFs, local Markdown, and more.
 
 ## A worked example: one week, two loops
+
+It started from a simple worry: learning now happens in fragments—a short video here, a paper, an X thread, an AI chat, and more—and it’s easy to feel what clicked slipping away, or wonder what you’re missing. Over time, that small worry grew into something larger: review cards hold onto what I’ve studied, discovery cards surface the missing piece along my own links, and every scattered lesson compounds into the judgment I bring back to working with AI.
 
 I read in Obsidian and use Codex with a daily schedule to maintain my own vault, opening the vault’s fixed webpage whenever I review cards. Over one week I studied four serving pieces—[a six-minute Bilibili video on the KV cache](https://www.bilibili.com/video/BV1jAZwBGEwi/), the WeChat essay [《预训练工程师在干什么》 (“What Do Pretraining Engineers Do?”)](https://mp.weixin.qq.com/s/Wt_HyaK98tPF39p1y6eMow), the [*Sarathi-Serve*](https://www.usenix.org/conference/osdi24/presentation/agrawal) paper, and [an AI chat with GPT on stream timing](examples/demo-vault/assets/demo/streaming-dialogue.md) (a public rewrite with reset numbers)—plus [a tokenization lecture on YouTube](https://www.youtube.com/watch?v=zduSFxRajkE&t=1430s). My assistant pulled them through the built-in readers and connected those four serving sources into [the LLM serving map](examples/demo-vault/MOCs/Streaming%20LLM%20Serving.md), while the YouTube lecture fed [the tokenization map](examples/demo-vault/MOCs/Multilingual%20Tokenizers.md).
 
